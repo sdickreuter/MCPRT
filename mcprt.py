@@ -15,25 +15,12 @@ modes = {
     "ray": 3,
 }
 
-@jit()
+@jit(nopython=True)
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
     return vector / np.linalg.norm(vector)
 
-@jit()
-def angle_between(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-    """
-    v1_u = unit_vector(v1)
-    v2_u = unit_vector(v2)
-    v = np.dot(v1_u, v2_u)
-    if v > 1.0:
-        v = 1.0
-    elif v < -1.0:
-        v = -1.0
-    return cmath.acos(v)
-
-@jit()
+@jit(nopython=True)
 def rotate_vector(vector, theta):
     c, s = np.cos(theta), np.sin(theta)
     R = np.zeros((2, 2))
@@ -41,15 +28,16 @@ def rotate_vector(vector, theta):
     R[1, 0] = -s
     R[0, 1] = s
     R[1, 1] = c
-    return np.dot(R, vector)
+    #return np.matmul(R, vector)
+    return R @ vector
 
-@jit()
-def gen_rotation_matrix(theta):
-    c, s = np.cos(theta), np.sin(theta)
-    R = np.array([[c, -s], [s, c]])
-    return R
+# @jit(nopython=True)
+# def gen_rotation_matrix(theta):
+#     c, s = np.cos(theta), np.sin(theta)
+#     R = np.array([[c, -s], [s, c]])
+#     return R
 
-@jit()
+@jit(nopython=True)
 def weightedChoice(weights):
     """
     Return a random item from objects, with the weighting defined by weights
@@ -60,7 +48,22 @@ def weightedChoice(weights):
     idx = np.sum(cs < np.random.rand())  # Find the index of the first weight over a random value.
     return idx
 
+@jit(nopython=True)
+def determinant(v, w):
+    return v[0] * w[1] - v[1] * w[0]
 
+@jit('double(double[:], double[:])',nopython=True)
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    v = np.dot(v1_u, v2_u)
+
+    if determinant(v1,v2) > 0:
+        return np.real(cmath.acos(v))
+    else:
+        return np.real(-cmath.acos(v))
 
 
 spec_Wavelets = [
@@ -118,12 +121,12 @@ class Wavelets(object):
         v2 = np.subtract(point2,self.r[index, :])
 
         if self.mode == 1: # spherical
-            phi2 = self.angle_between(v1, v2).real
+            phi2 = angle_between(v1, v2)
             probability = np.abs((phi2) / (np.pi))
 
         elif self.mode == 2: # gaussian
-            phi1 = self.angle_between(v1, self.k[index, :]).real
-            phi2 = self.angle_between(v2, self.k[index, :]).real
+            phi1 = angle_between(v1, self.k[index, :])
+            phi2 = angle_between(v2, self.k[index, :])
             if phi2 > phi1:
                 probability = np.real( 1 / (4 * np.pi) * (
                             cmath.sin(2 * phi1 + np.pi) - 2 * phi1 - cmath.sin(2 * phi2 + np.pi) + 2 * phi2))
@@ -142,24 +145,6 @@ class Wavelets(object):
         return probability
 
 
-    # def unit_vector(self, vector):
-    #     """ Returns the unit vector of the vector.  """
-    #     return vector / np.linalg.norm(vector)
-
-    def angle_between(self, v1, v2):
-        """ Returns the angle in radians between vectors 'v1' and 'v2'::
-        """
-        # v1_u = self.unit_vector(v1)
-        # v2_u = self.unit_vector(v2)
-        def determinant(v, w):
-            return v[0] * w[1] - v[1] * w[0]
-        v1_u = v1 / np.linalg.norm(v1)
-        v2_u = v2 / np.linalg.norm(v2)
-        v = np.dot(v1_u, v2_u)
-        if determinant(v1,v2) > 0:
-            return cmath.acos(v)
-        else:
-            return -cmath.acos(v)
 
     def angle_between_clockwise(self, v1, v2):
         """ Returns the angle in radians between vectors 'v1' and 'v2'::
@@ -190,7 +175,7 @@ class Wavelets(object):
     def is_between(self,k,v1,v2):
         def determinant(v, w):
             return v[0] * w[1] - v[1] * w[0]
-        return ( (determinant(k,v1)>=0) ^ (determinant(k,v2)>0) )
+        return (determinant(k,v1)>0) ^ (determinant(k,v2)>0)
 
     def append_wavelets(self, wavelets):
         self.r = np.concatenate((self.r, wavelets.r))
@@ -225,8 +210,8 @@ class Surface(object):
         self.normals = np.zeros((self.points.shape[0] - 1,2))
         for i in range(self.points.shape[0]-1):
             self.midpoints[i] = 0.5 * np.add(self.points[i], self.points[i + 1])
-            normal = self.rotate_vector(np.subtract(self.points[i], self.points[i + 1]), np.pi / 2)
-            normal /= np.linalg.norm(normal)
+            normal = rotate_vector(np.subtract(self.points[i], self.points[i + 1]), np.pi / 2)
+            normal = unit_vector(normal)
             self.normals[i] = normal
 
         self.field = np.zeros((self.midpoints.shape[0],2),np.float64)
@@ -246,63 +231,17 @@ class Surface(object):
 
     def flip_normals(self):
         for i in range(self.normals.shape[0]):
-            self.normals[i] =  self.rotate_vector(self.normals[i], np.pi )
-
-
-    def angle_between(self, v1, v2):
-        """
-        Returns the angle in radians between vectors 'v1' and 'v2'::
-        """
-        def determinant(v, w):
-            return v[0] * w[1] - v[1] * w[0]
-        v1_u = v1 / np.linalg.norm(v1)
-        v2_u = v2 / np.linalg.norm(v2)
-        v = np.dot(v1_u, v2_u)
-        if determinant(v1,v2) > 0:
-            return cmath.acos(v)
-        else:
-            return 2*np.pi-cmath.acos(v)
-
+            self.normals[i] =  rotate_vector(self.normals[i], np.pi )
 
     def reflected_k(self, vector, normal):
         reflected = vector - (2 * (np.dot(normal, vector)) * normal)
         return reflected
 
     def transmitted_k(self, k, normal):
-        alpha =  self.angle_between(k, normal).real
+        alpha = angle_between(k, normal)
         beta = cmath.asin( (self.n1/self.n2) * np.sin(alpha) ).real
-        #beta = np.arcsin((self.n1 / self.n2) * np.sin(alpha))
-        transmitted = self.rotate_vector(normal, beta)
+        transmitted = rotate_vector(normal, beta)
         return transmitted
-
-    def rotate_vector(self, vector, theta):
-        c, s = np.cos(theta), np.sin(theta)
-        R = np.zeros((2, 2))
-        R[0, 0] = c
-        R[1, 0] = -s
-        R[0, 1] = s
-        R[1, 1] = c
-        return np.dot(R, vector)
-
-    # def interact(self, wavelet):
-    #     probabilities = np.zeros(self.points.shape[0] - 1, dtype=np.float64)
-    #     fields = np.zeros(self.points.shape[0] - 1)
-    #     for i in range(self.points.shape[0] - 1):
-    #         probabilities[i] = wavelet.calc_probability(self.points[i], self.points[i + 1])
-    #         middle_point = 0.5 * np.add(self.points[i], self.points[i + 1])
-    #         fields[i] = wavelet.calc_field(middle_point)
-    #
-    #     return probabilities, fields
-
-    def weightedChoice(self, weights):
-        """
-        Return a random item from objects, with the weighting defined by weights
-        (which must sum to 1).
-        From: http://stackoverflow.com/a/10803136
-        """
-        cs = np.cumsum(weights)  # An array of the weights, cumulatively summed.
-        idx = np.sum(cs < np.random.rand())  # Find the index of the first weight over a random value.
-        return idx
 
     def localize_wavelet(self, wavelets, index):
         probabilities = np.zeros(self.points.shape[0] - 1, dtype=np.float64)
@@ -317,7 +256,7 @@ class Surface(object):
             # else:
             #     return np.array([0.0, 0.0]), np.array([0.0, 0.0]), False
             probabilities /= np.sum(probabilities)
-            surface_index = self.weightedChoice(probabilities)
+            surface_index = weightedChoice(probabilities)
             return surface_index, True
 
         elif wavelets.mode == 3:
@@ -351,26 +290,6 @@ class Surface(object):
 
         return -1, np.array([0.0, 0.0]), 0.0, False
 
-    # def intensity_on_surface(self,wavelets):
-    #     hits = np.zeros(wavelets.n, dtype=np.float64)
-    #     rs = np.zeros((wavelets.n, 2), dtype=np.float64)
-    #     ints = np.zeros(wavelets.n, dtype=np.float64)
-    #
-    #     r = np.zeros(2)
-    #     k = np.zeros(2)
-    #     t = 0.0
-    #     hit = False
-    #
-    #     for i in range(wavelets.n):
-    #         #r, normal, hit = self.localize_wavelet(wavelets, i)
-    #         rs[i] = r
-    #         hits[i] = hit
-    #         ints[i] = wavelets.field_at_r(i,1.0)
-    #
-    #     indices = (hits > 0)
-    #
-    #     return rs[indices,:], ints[indices]
-
     def add_field_from_wavelets(self,wavelets):
         self.count += wavelets.n
 
@@ -378,15 +297,6 @@ class Surface(object):
             j = wavelets.surface_index[i]
             self.field[j] += wavelets.field_at_r(i,1.0)#*np.sin(np.real(angle_between(self.rotate_vector(wavelets.k[i,:],np.pi/2),(self.points[j+1, :]-self.points[j, :]))))
             self.hits[j] += 1
-
-        # for i in range(wavelets.n):
-        #     field[i] = wavelets.field_at_r(i,1.0)
-        #
-        # for i in range(len(field)):
-        #     for j in range(self.field.shape[0]):
-        #         if ((wavelets.r[i, 1] > self.points[j, 1]) and (wavelets.r[i, 1] < self.points[j + 1, 1])):
-        #             self.field[j] += field[i]#*np.sin(np.real(angle_between(self.rotate_vector(wavelets.k[i,:],np.pi/2),(self.points[j+1, :]-self.points[j, :]))))
-        #             self.hits[j] += 1
 
     def interact_with_all_wavelets(self, wavelets):
         hits = np.zeros(wavelets.n, dtype=np.float64)
@@ -436,6 +346,11 @@ class Lense(object):
         self.front = Surface(points1, reflectivity=reflectivity, transmittance=transmittance, n1=n1, n2=n2)
         self.back = Surface(points2, reflectivity=reflectivity, transmittance=transmittance, n1=n2, n2=n1)
 
+        if self.r1 is not np.inf:
+            self.front.flip_normals()
+        if self.r2 is not np.inf:
+            self.back.flip_normals()
+
         self.front.points[:,0] -= self.height / 5
         self.back.points[:, 0] += self.height / 5
 
@@ -458,13 +373,14 @@ class Lense(object):
     def _gen_concave_points(self, p0, r, height, num):
         if height > np.abs(r):
             height = np.abs(r)
-        v = [r, 0]
+        v = np.array([r, 0])
         theta_max = np.arcsin(height / r)
         thetas = np.linspace(theta_max, -theta_max, num)
         points = np.zeros((num, 2))
         for i, theta in enumerate(thetas):
-            R = gen_rotation_matrix(theta)
-            buf = np.dot(R, v)
+            # R = gen_rotation_matrix(theta)
+            # buf = np.dot(R, v)
+            buf = rotate_vector(v,theta)
             points[i] = p0 + buf
         return points
 

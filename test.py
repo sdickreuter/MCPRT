@@ -41,8 +41,8 @@ for i in range(len(xs)-1):
 
     v1 = np.subtract(point1, a.r[0, :])
     v2 = np.subtract(point2, a.r[0, :])
-    angle1.append(a.angle_between(v1, a.k[0, :]).real)
-    angle2.append(a.angle_between(v2, a.k[0, :]).real)
+    angle1.append(angle_between(v1, a.k[0, :]))
+    angle2.append(angle_between(v2, a.k[0, :]))
 
 plt.plot(prob)
 plt.show()
