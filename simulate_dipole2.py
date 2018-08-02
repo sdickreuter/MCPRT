@@ -13,15 +13,16 @@ import cmath
 from mcprt import *
 import progress
 
+c = 2.998e8  # m/s
 wavelength = 500*1e-9 #m
 
 plotit = True
 
-iterations = 1000
+iterations = 5000
 
 theta = 0#np.pi/2
 
-num = 151
+num = 100
 
 lense1 = Lense(x=0.0, y=0,r1=np.inf,r2=20.0*1e-3,height=10.0*1e-3, num=num)
 lense2 = Lense(x=0.0, y=0,r1=-20.0*1e-3,r2=np.inf,height=10.0*1e-3, num=num)
@@ -33,7 +34,7 @@ lense2.shift(dx=lense1.back.points[:,0].max()+lense1._calc_f_back()+lense2._calc
 # lense1.shift(dx=lense1._calc_f_front()+lense1.front.points[:,0].min())
 # lense2.shift(dx=lense1.back.points[:,0].max()+lense1._calc_f_back()/2)
 
-alpha_max = np.real(angle_between(np.array([1,0]),lense1.front.points[0,:]))#np.pi/10)
+alpha_max = np.abs(angle_between(np.array([1,0],dtype=np.float64),lense1.front.points[0,:]))#np.pi/10)
 print("alpha_max: "+str(alpha_max)+'  '+str(alpha_max*180/np.pi))
 
 
@@ -70,13 +71,13 @@ print("alpha_max: "+str(alpha_max)+'  '+str(alpha_max*180/np.pi))
 # plt.close()
 
 
-num = 2001
-ys = np.linspace(-0.5, 0.5, num)*1e-3
+num = 200
+ys = np.linspace(-0.5, 0.5, num)*1e-2
 #xs = np.repeat(lense2.x+lense2.f, num)
-xs = np.repeat(lense2.back.points[:,0].max()+lense2._calc_f_back(), num)
+#xs = np.repeat(lense2.back.points[:,0].max()+lense2._calc_f_back(), num)
 #print('screen x: '+ str(xs[0]))
 #xs = np.repeat(15.967, num)
-#xs = np.repeat(15.97, num)
+xs = np.repeat(0.152, num)
 screen = Surface(np.vstack((xs, ys)).T, reflectivity=0.0, transmittance=1.0, n1=1.0, n2=1.0)
 screen.flip_normals()
 
@@ -139,14 +140,14 @@ if plotit:
     # for i in range(onscreen.r.shape[0]):
     #     plt.plot(onscreen.r[i, 0], onscreen.r[i, 1], "bo")
     #     plt.arrow(onscreen.r[i, 0], onscreen.r[i, 1], onscreen.k[i, 0] / divider, onscreen.k[i, 1] / divider)
-    plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_setup.svg", dpi=600)
+    #plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_setup.svg", dpi=600)
     plt.show()
     plt.close()
 
 
 
 prog = progress.Progress(max=iterations)
-num=500
+num=1000
 for i in range(iterations):
 
     dipole = make_dipole(wavelength,theta, alpha_max, num)
@@ -174,14 +175,14 @@ for i in range(iterations):
 plt.plot(screen.midpoints[:,1],screen.field ** 2)
 plt.xlabel("position on screen / m")
 plt.ylabel("intensity / a.u.")
-plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen.png", dpi=600)
+#plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen.png", dpi=600)
 plt.show()
 plt.close()
 
 plt.plot(screen.midpoints[:,1],screen.hits)
 plt.xlabel("position on screen / m")
 plt.ylabel("number of hits")
-plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen_hits.png", dpi=600)
+#plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen_hits.png", dpi=600)
 plt.show()
 plt.close()
 

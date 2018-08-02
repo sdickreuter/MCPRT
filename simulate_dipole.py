@@ -18,7 +18,7 @@ plotit = True
 
 iterations = 10000
 
-theta = 0#np.pi/2
+theta = np.pi/2
 
 num = 100
 
@@ -69,11 +69,11 @@ print("alpha_max: "+str(alpha_max)+'  '+str(alpha_max*180/np.pi))
 
 
 num = 100
-ys = np.linspace(-0.5, 0.5, num)
+ys = np.linspace(-0.35, 0.35, num)
 #xs = np.repeat(lense2.x+lense2._calc_f_back(), num)
-#xs = np.repeat(lense2.back.points[:,0].max()+lense2._calc_f_back(), num)
+xs = np.repeat(lense2.back.points[:,0].max()+lense2._calc_f_back(), num)
 print('focus x: '+str(lense2.back.points[:,0].max()+lense2._calc_f_back()))
-xs = np.repeat(15.75, num)
+#xs = np.repeat(15.70, num)
 print('screen x: '+ str(xs[0]))
 screen = Surface(np.vstack((xs, ys)).T, reflectivity=0.0, transmittance=1.0, n1=1.0, n2=1.0)
 screen.flip_normals()
@@ -225,6 +225,7 @@ plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen.png",
 plt.show()
 plt.close()
 
+
 plt.plot(screen.midpoints[:,1],screen.hits)
 plt.xlabel("position on screen / m")
 plt.ylabel("number of hits")
@@ -232,4 +233,8 @@ plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen_hits.
 plt.show()
 plt.close()
 
+
+np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen.csv",np.vstack((screen.midpoints[:,1],screen.field ** 2)))
+
+np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen_hits.csv",np.vstack((screen.midpoints[:,1],screen.hits)))
 
