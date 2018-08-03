@@ -224,10 +224,9 @@ class Surface(object):
 
     def _update_normals(self):
         for i in range(self.points.shape[0]-1):
-            normal = self.rotate_vector(np.subtract(self.points[i], self.points[i + 1]), np.pi / 2)
-            normal /= np.linalg.norm(normal)
+            normal = rotate_vector(np.subtract(self.points[i], self.points[i + 1]), np.pi / 2)
+            normal = unit_vector(normal)
             self.normals[i] = normal
-
 
     def flip_normals(self):
         for i in range(self.normals.shape[0]):
@@ -276,11 +275,18 @@ class Surface(object):
         if hit:
             if self.reflectivity > 0.0:
                 if np.random.rand() <= self.reflectivity:
-                    k = self.reflected_k(wavelets.k[index,:], self.normals[surface_index,:])
+                    new_k = self.midpoints[surface_index, :] - wavelets.r[index, :]
+                    #new_k = unit_vector(new_k)* 2 * np.pi / wavelets.wavelength
+                    k = self.reflected_k(new_k, self.normals[surface_index, :])
+                    #k = self.reflected_k(wavelets.k[index,:], self.normals[surface_index,:])
                     absorbed = False
             elif self.transmittance > 0.0:
                 if np.random.rand() <= self.transmittance:
-                    k = self.transmitted_k(wavelets.k[index,:], self.normals[surface_index,:])
+                    #new_k = wavelets.r[index,:]-self.midpoints[surface_index,:]
+                    new_k = self.midpoints[surface_index, :] - wavelets.r[index, :]
+                    #new_k = unit_vector(new_k)* 2 * np.pi / wavelets.wavelength
+                    k = self.transmitted_k(new_k, self.normals[surface_index, :])
+                    #k = self.transmitted_k(wavelets.k[index,:], self.normals[surface_index,:])
                     absorbed = False
 
             if not absorbed:
@@ -422,6 +428,113 @@ class Lense(object):
         self.back._update_midpoints()
 
 
+class HyperbolicLense(object):
+
+    def __init__(self, x, y, f, height,reflectivity=0.0,transmittance=1.0, n1=1.0, n2=1.5, num=128):
+        self.n1 = n1
+        self.n2 = n2
+        self.f = f
+        self.x = x
+        self.y = y
+        self.height = height
+        self.reflectivity = reflectivity
+        self.transmittance = transmittance
+        self.num = num
+
+        self._make_surfaces()
+
+
+    def _make_surfaces(self,flipped = False):
+
+        if flipped:
+            points2 = self._gen_hyperbolic_points()
+            for i in range(self.front.points.shape[0]):
+                points2[i, :] = rotate_vector(self.front.points[i,:], np.pi)
+            points2 = np.flipud(points2)
+            points1 = self._generate_line()
+        else:
+            points1 = self._gen_hyperbolic_points()
+            points2 = self._generate_line()
+
+        self.front = Surface(points1, reflectivity=self.reflectivity, transmittance=self.transmittance, n1=self.n1, n2=self.n2)
+        self.back = Surface(points2, reflectivity=self.reflectivity, transmittance=self.transmittance, n1=self.n2, n2=self.n1)
+
+        self.front.points[:,0] -= self.height / 5
+        self.back.points[:, 0] += self.height / 5
+
+        self.front.points[:,0] += self.x
+        self.back.points[:, 0] += self.x
+        self.front.points[:,1] += self.y
+        self.back.points[:, 1] += self.y
+
+        self.front._update_midpoints()
+        self.back._update_midpoints()
+
+        #self.front.flip_normals()
+        self.d = self.back.points[:, 0].max() - self.front.points[:, 0].min()
+
+
+
+    # from :
+    # https://www.google.de/url?sa=t&rct=j&q=&esrc=s&source=web&cd=6&cad=rja&uact=8&ved=2ahUKEwij4-Ly6M7cAhVRKuwKHW6QDCcQFjAFegQICRAC&url=https%3A%2F%2Fwww.ssl.berkeley.edu%2F~mlampton%2FHyperbolicLens.pdf&usg=AOvVaw2TZIPNb1xqk1ap_BvLLGZb
+    def _gen_hyperbolic_points(self):
+        C = 1/((self.n2-1)*self.f)
+        S = 1-self.n2**2
+
+        y = np.linspace(self.height, -self.height, self.num)
+        x = np.zeros(self.num)
+        x = C*(y**2) / (1 + np.sqrt( 1 - S*(C**2)*(y**2)) )
+
+        x = x - x.max()
+        points = np.zeros((self.num, 2))
+        points[:, 0] = x
+        points[:, 1] = y
+        return points
+
+    def _generate_line(self):
+
+        points1 = np.zeros((self.num, 2))
+        points1[:, 1] = np.linspace(self.height, -self.height, self.num)
+
+        return points1
+
+
+    def shift(self, dx = 0, dy = 0):
+        self.x += dx
+        self.y += dy
+        self.front.points[:, 0] += dx
+        self.back.points[:, 0] += dx
+        self.front.points[:, 1] += dy
+        self.back.points[:, 1] += dy
+        self.front._update_midpoints()
+        self.back._update_midpoints()
+
+
+    # def fliplr(self):
+    #     self.front.points[:, 0] -= self.x
+    #     self.back.points[:, 0] -= self.x
+    #     self.front.points[:, 1] -= self.y
+    #     self.back.points[:, 1] -= self.y
+    #     for i in range(self.front.points.shape[0]):
+    #         self.front.points[i, :] = rotate_vector(self.front.points[i,:], np.pi)
+    #         self.back.points[i, :] = rotate_vector(self.back.points[i,:], np.pi)
+    #     self.front.points[:, 0] += self.x
+    #     self.back.points[:, 0] += self.x
+    #     self.front.points[:, 1] += self.y
+    #     self.back.points[:, 1] += self.y
+    #     self.front._update_midpoints()
+    #     self.front._update_normals()
+    #     #self.front.flip_normals()
+    #     self.back._update_midpoints()
+    #     self.front._update_normals()
+    #     buf = self.front
+    #     self.front = self.back
+    #     self.back = buf
+    #     self.back.flip_normals()
+    #     self.back.n1 = self.n2
+    #     self.back.n2 = self.n1
+    #     self.front.n1 = self.n1
+    #     self.front.n2 = self.n2
 
 
 @jit
@@ -431,6 +544,7 @@ def make_dipole(wavelength, theta,alpha_max,num, mode='ray'):
     ks[:, 0] = np.repeat(1.0, num)
     alphas = np.linspace(-alpha_max, alpha_max, num)
     probabilities = (np.cos(theta - alphas) ** 2)
+    #probabilities = np.ones(num)
     probabilities /= np.sum(probabilities)
     b = np.zeros(num)
 
