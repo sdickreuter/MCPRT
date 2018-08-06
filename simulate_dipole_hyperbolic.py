@@ -17,11 +17,11 @@ import progress
 
 plotit = True
 
-iterations = 100
+iterations = 1000
 
 theta = 0#np.pi/2
 
-num = 80
+num = 73
 
 lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
 lense2 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)

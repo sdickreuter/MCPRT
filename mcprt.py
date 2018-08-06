@@ -366,7 +366,9 @@ class Lense(object):
         self.back.points[:, 1] += y
 
         self.front._update_midpoints()
+        self.front._update_normals()
         self.back._update_midpoints()
+        self.back._update_normals()
 
         #self.front.flip_normals()
         self.d = self.back.points[:, 0].max() - self.front.points[:, 0].min()
@@ -468,7 +470,9 @@ class HyperbolicLense(object):
         self.back.points[:, 1] += self.y
 
         self.front._update_midpoints()
+        self.front._update_normals()
         self.back._update_midpoints()
+        self.back._update_normals()
 
         #self.front.flip_normals()
         self.d = self.back.points[:, 0].max() - self.front.points[:, 0].min()
