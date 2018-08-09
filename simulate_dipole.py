@@ -16,9 +16,9 @@ import progress
 
 plotit = True
 
-iterations = 10000
+iterations = 1000
 
-theta = np.pi/2
+theta = 0#np.pi/2
 
 num = 100
 
@@ -161,20 +161,20 @@ if plotit:
     for i in range(dipole.r.shape[0]):
         #plt.plot(dipole.r[i, 0], dipole.r[i, 1], "bo")
         plt.arrow(dipole.r[i, 0], dipole.r[i, 1], dipole.k[i, 0] / (divider*10), dipole.k[i, 1] / (divider*10))
-    plt.plot(lense1.front.points[:, 0], lense1.front.points[:, 1])
+    plt.plot(lense1.front.midpoints[:, 0], lense1.front.midpoints[:, 1],'b.')
     for i in range(onlense1_front.r.shape[0]):
         #plt.plot(onlense1_front.r[i, 0], onlense1_front.r[i, 1], "bo")
         plt.arrow(onlense1_front.r[i, 0], onlense1_front.r[i, 1], onlense1_front.k[i, 0] / (divider*10), onlense1_front.k[i, 1] / (divider*10))
-    plt.plot(lense1.back.points[:, 0], lense1.back.points[:, 1])
+    plt.plot(lense1.back.midpoints[:, 0], lense1.back.midpoints[:, 1],'r.')
     for i in range(onlense1_back.r.shape[0]):
         #plt.plot(onlense1_back.r[i, 0], onlense1_back.r[i, 1], "bo")
         plt.arrow(onlense1_back.r[i, 0], onlense1_back.r[i, 1], onlense1_back.k[i, 0] / divider, onlense1_back.k[i, 1] / divider)
-    plt.plot(lense2.front.points[:, 0], lense2.front.points[:, 1])
+    plt.plot(lense2.front.midpoints[:, 0], lense2.front.midpoints[:, 1],'k.')
     for i in range(onlense2_front.r.shape[0]):
         #plt.plot(onlense2_front.r[i, 0], onlense2_front.r[i, 1], "bo")
         plt.arrow(onlense2_front.r[i, 0], onlense2_front.r[i, 1], onlense2_front.k[i, 0] / (divider*10),
                   onlense2_front.k[i, 1] / (divider*10))
-    plt.plot(lense2.back.points[:, 0], lense2.back.points[:, 1])
+    plt.plot(lense2.back.midpoints[:, 0], lense2.back.midpoints[:, 1],'g.')
     for i in range(onlense2_back.r.shape[0]):
         #plt.plot(onlense2_back.r[i, 0], onlense2_back.r[i, 1], "bo")
         plt.arrow(onlense2_back.r[i, 0], onlense2_back.r[i, 1], onlense2_back.k[i, 0] / divider,

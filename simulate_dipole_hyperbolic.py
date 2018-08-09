@@ -21,7 +21,7 @@ iterations = 1000
 
 theta = 0#np.pi/2
 
-num = 73
+num = 72
 
 lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
 lense2 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
@@ -97,7 +97,7 @@ onlense2_back = lense2.back.interact_with_all_wavelets(onlense2_front)
 print("onlense2 back: " + str(onlense2_back.n))
 
 
-onlense2_back.mode = modes['gaussian']
+onlense2_back.mode = modes['spherical']
 onscreen = screen.interact_with_all_wavelets(onlense2_back)
 
 print("onscreen: " + str(onscreen.n))
@@ -203,7 +203,7 @@ for i in range(iterations):
     onlense2_back = lense2.back.interact_with_all_wavelets(onlense2_front)
 
     onlense2_back = lense2.back.interact_with_all_wavelets(onlense2_front)
-    onlense2_back.mode = modes['gaussian']
+    onlense2_back.mode = modes['spherical']
     onscreen = screen.interact_with_all_wavelets(onlense2_back)
 
     screen.add_field_from_wavelets(onscreen)

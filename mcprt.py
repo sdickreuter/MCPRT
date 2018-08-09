@@ -258,16 +258,22 @@ class Surface(object):
             surface_index = weightedChoice(probabilities)
             return surface_index, True
 
+        # elif wavelets.mode == 3:
+        #     surface_index = -1
+        #     for j in range(len(probabilities)):
+        #         if probabilities[j] > 0:
+        #             surface_index = j
+        #
+        #     if surface_index >= 0:
+        #         return surface_index, True
+        #     else:
+        #         return surface_index, False
         elif wavelets.mode == 3:
-            surface_index = -1
             for j in range(len(probabilities)):
                 if probabilities[j] > 0:
-                    surface_index = j
-            if surface_index >= 0:
-                return surface_index, True
-            else:
-                return surface_index, False
+                    return j, True
 
+            return -1, False
 
     def interact_with_wavelet(self, wavelets, index):
         surface_index, hit = self.localize_wavelet(wavelets, index)
@@ -291,7 +297,8 @@ class Surface(object):
 
             if not absorbed:
                 t = wavelets.calc_t_of_wavelet(index,self.midpoints[surface_index,:],self.n1)
-                k = k / np.linalg.norm(k) * 2 * np.pi / wavelets.wavelength
+                k = new_k
+                #k = k / np.linalg.norm(k) * 2 * np.pi / wavelets.wavelength
                 return surface_index, k, t, True
 
         return -1, np.array([0.0, 0.0]), 0.0, False
@@ -352,11 +359,6 @@ class Lense(object):
         self.front = Surface(points1, reflectivity=reflectivity, transmittance=transmittance, n1=n1, n2=n2)
         self.back = Surface(points2, reflectivity=reflectivity, transmittance=transmittance, n1=n2, n2=n1)
 
-        if self.r1 is not np.inf:
-            self.front.flip_normals()
-        if self.r2 is not np.inf:
-            self.back.flip_normals()
-
         self.front.points[:,0] -= self.height / 5
         self.back.points[:, 0] += self.height / 5
 
@@ -369,6 +371,11 @@ class Lense(object):
         self.front._update_normals()
         self.back._update_midpoints()
         self.back._update_normals()
+
+        if self.r1 is not np.inf:
+            self.front.flip_normals()
+        if self.r2 is not np.inf:
+            self.back.flip_normals()
 
         #self.front.flip_normals()
         self.d = self.back.points[:, 0].max() - self.front.points[:, 0].min()
