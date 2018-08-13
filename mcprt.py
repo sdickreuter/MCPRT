@@ -3,7 +3,7 @@ import locale
 locale.setlocale(locale.LC_NUMERIC, 'C')
 
 import numpy as np
-from numba import jit, jitclass, float64, int64, void, boolean, uint64, complex128, prange
+from numba import njit, jit, jitclass, float64, int64, void, boolean, uint64, complex128, prange
 import cmath
 
 #c = 2.998e8  # m/s
@@ -15,12 +15,12 @@ modes = {
     "ray": 3,
 }
 
-@jit(nopython=True)
+@njit
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
     return vector / np.linalg.norm(vector)
 
-@jit(nopython=True)
+@njit
 def rotate_vector(vector, theta):
     c, s = np.cos(theta), np.sin(theta)
     R = np.zeros((2, 2))
@@ -37,7 +37,7 @@ def rotate_vector(vector, theta):
 #     R = np.array([[c, -s], [s, c]])
 #     return R
 
-@jit(nopython=True)
+@njit
 def weightedChoice(weights):
     """
     Return a random item from objects, with the weighting defined by weights
@@ -48,7 +48,7 @@ def weightedChoice(weights):
     idx = np.sum(cs < np.random.rand())  # Find the index of the first weight over a random value.
     return idx
 
-@jit(nopython=True)
+@njit
 def determinant(v, w):
     return v[0] * w[1] - v[1] * w[0]
 
@@ -64,6 +64,43 @@ def angle_between(v1, v2):
         return np.real(cmath.acos(v))
     else:
         return np.real(-cmath.acos(v))
+
+# calculation of line intersection from
+# https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines-in-python
+@njit
+def line(p1, p2):
+    A = (p1[1] - p2[1])
+    B = (p2[0] - p1[0])
+    C = (p1[0] * p2[1] - p2[0] * p1[1])
+    return A, B, -C
+
+@njit
+def intersection(L1, L2):
+    D = L1[0] * L2[1] - L1[1] * L2[0]
+    Dx = L1[2] * L2[1] - L1[1] * L2[2]
+    Dy = L1[0] * L2[2] - L1[2] * L2[0]
+    x = Dx / D
+    y = Dy / D
+    return x, y
+
+@njit
+def get_intersect(A, B, C, D):
+    a1 = B[1] - A[1]
+    b1 = A[0] - B[0]
+    c1 = a1 * (A[0]) + b1 * (A[1])
+
+    a2 = D[1] - C[1]
+    b2 = C[0] - D[0]
+    c2 = a2 * (C[0]) + b2 * (C[1])
+
+    determinant = a1 * b2 - a2 * b1
+
+    if determinant == 0:
+        return np.inf, np.inf
+    else :
+        x = (b2 * c1 - b1 * c2) / determinant
+        y = (a1 * c2 - a2 * c1) / determinant
+        return x,y
 
 
 spec_Wavelets = [
@@ -97,7 +134,7 @@ class Wavelets(object):
         self.surface_index = np.zeros(self.n,dtype=np.int64)
 
     def calc_t_of_wavelet(self, index, point, n=1.0):
-        return np.sqrt(np.sum(np.square(np.subtract(self.r[index,:], point)))) / (c/n)+self.t0[index]
+        return np.sqrt(np.sum(np.square(np.subtract(self.r[index,:], point)))) / (c/n) + self.t0[index]
 
     def calc_field(self, points, t, n=1.0):
         f = (c/n) / self.wavelength
@@ -106,15 +143,20 @@ class Wavelets(object):
             for i in range(self.n):
                 r = self.r[i,:] - points[j,:]
                 field[j] += 1 / r * cmath.exp(1j * ( ( np.dot(self.k[i, :],r)
-                                                     - 2 * cmath.pi * ((c/n)/self.wavelength) * (t - self.t0[i]) + self.phases[i])))
+                                                     - 2 * cmath.pi * f * (t - self.t0[i]) + self.phases[i])))
         return np.real(field)
 
-    def field_at_r(self,index,t):
+    def field_at_r(self,index):
         n = 1.0
         f = (c/n) / self.wavelength
         field = np.real(cmath.exp(1j *( -2 * cmath.pi * f * (t - self.t0[index]) + self.phases[index])))
         return field#*rotate_vector(self.k[index,:],np.pi/2) / np.linalg.norm(self.k[index,:])
 
+    def phase_at_r(self,index):
+        n = 1.0
+        f = (c/n) / self.wavelength
+        phase = 2 * cmath.pi * f * self.t0[index] + self.phases[index]
+        return phase#*rotate_vector(self.k[index,:],np.pi/2) / np.linalg.norm(self.k[index,:])
 
     def calc_probability_of_wavelet(self,index, point1, point2):
         v1 = np.subtract(point1,self.r[index, :])
@@ -193,6 +235,7 @@ spec_Surface = [
     ('n2', float64),
     ('midpoints', float64[:, :]),
     ('field', float64[:,:]),
+    ('phase', float64[:]),
     ('hits', int64[:]),
     ('normals', float64[:, :]),
     ('count', int64),
@@ -215,6 +258,7 @@ class Surface(object):
             self.normals[i] = normal
 
         self.field = np.zeros((self.midpoints.shape[0],2),np.float64)
+        self.phase = np.zeros(self.midpoints.shape[0],dtype=np.float64)
         self.hits = np.zeros(self.midpoints.shape[0],dtype=np.int64)
         self.count = 0
 
@@ -256,52 +300,35 @@ class Surface(object):
             #     return np.array([0.0, 0.0]), np.array([0.0, 0.0]), False
             probabilities /= np.sum(probabilities)
             surface_index = weightedChoice(probabilities)
-            return surface_index, True
+            return surface_index, self.midpoints[surface_index,:],True
 
-        # elif wavelets.mode == 3:
-        #     surface_index = -1
-        #     for j in range(len(probabilities)):
-        #         if probabilities[j] > 0:
-        #             surface_index = j
-        #
-        #     if surface_index >= 0:
-        #         return surface_index, True
-        #     else:
-        #         return surface_index, False
         elif wavelets.mode == 3:
             for j in range(len(probabilities)):
                 if probabilities[j] > 0:
-                    return j, True
-
-            return -1, False
+                    #x,y = intersection(line(wavelets.r[index,:],wavelets.r[index,:]+wavelets.k[index,:]),line(self.points[i],self.points[i+1]))
+                    x,y = get_intersect(wavelets.r[index,:],wavelets.r[index,:]+wavelets.k[index,:],self.points[j],self.points[j+1])
+                    return j, np.array([x,y]) ,True
+            return -1, np.array([0.0,0.0]), False
 
     def interact_with_wavelet(self, wavelets, index):
-        surface_index, hit = self.localize_wavelet(wavelets, index)
+        surface_index, point, hit = self.localize_wavelet(wavelets, index)
         absorbed = True
         if hit:
             if self.reflectivity > 0.0:
                 if np.random.rand() <= self.reflectivity:
-                    new_k = self.midpoints[surface_index, :] - wavelets.r[index, :]
-                    #new_k = unit_vector(new_k)* 2 * np.pi / wavelets.wavelength
-                    k = self.reflected_k(new_k, self.normals[surface_index, :])
-                    #k = self.reflected_k(wavelets.k[index,:], self.normals[surface_index,:])
+                    new_k = self.reflected_k(wavelets.k[index,:], self.normals[surface_index,:])
                     absorbed = False
             elif self.transmittance > 0.0:
                 if np.random.rand() <= self.transmittance:
-                    #new_k = wavelets.r[index,:]-self.midpoints[surface_index,:]
-                    new_k = self.midpoints[surface_index, :] - wavelets.r[index, :]
-                    #new_k = unit_vector(new_k)* 2 * np.pi / wavelets.wavelength
-                    k = self.transmitted_k(new_k, self.normals[surface_index, :])
-                    #k = self.transmitted_k(wavelets.k[index,:], self.normals[surface_index,:])
+                    new_k = self.transmitted_k(wavelets.k[index,:], self.normals[surface_index,:])
                     absorbed = False
 
             if not absorbed:
                 t = wavelets.calc_t_of_wavelet(index,self.midpoints[surface_index,:],self.n1)
-                k = new_k
                 #k = k / np.linalg.norm(k) * 2 * np.pi / wavelets.wavelength
-                return surface_index, k, t, True
+                return surface_index, point, new_k, t, True
 
-        return -1, np.array([0.0, 0.0]), 0.0, False
+        return -1, np.array([0.0, 0.0]),np.array([0.0, 0.0]), 0.0, False
 
     def add_field_from_wavelets(self,wavelets):
         self.count += wavelets.n
@@ -309,6 +336,15 @@ class Surface(object):
         for i in range(wavelets.n):
             j = wavelets.surface_index[i]
             self.field[j] += wavelets.field_at_r(i,1.0)#*np.sin(np.real(angle_between(self.rotate_vector(wavelets.k[i,:],np.pi/2),(self.points[j+1, :]-self.points[j, :]))))
+            #self.field[j] += np.cos((wavelets.phase_at_r(i)-self.phase[j])/2)
+            self.hits[j] += 1
+
+    def add_phase_from_wavelets(self,wavelets):
+        self.count += wavelets.n
+
+        for i in range(wavelets.n):
+            j = wavelets.surface_index[i]
+            self.phase[j] += (wavelets.phase_at_r(i)-self.phase[j])/2
             self.hits[j] += 1
 
     def interact_with_all_wavelets(self, wavelets):
@@ -324,9 +360,9 @@ class Surface(object):
         hit = False
 
         for i in range(wavelets.n):
-            surface_index, k, t, hit = self.interact_with_wavelet(wavelets,i)
+            surface_index, point, k, t, hit = self.interact_with_wavelet(wavelets,i)
             hits[i] = hit
-            rs[i] = self.midpoints[surface_index,:]
+            rs[i] = point
             ks[i] = k
             ts[i] = t
             s_index[i] = surface_index
