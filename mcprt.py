@@ -124,7 +124,7 @@ class Wavelets(object):
         self.n = r.shape[0]
         self.k = np.zeros((self.n,2))
         for i in range(self.n):
-            self.k[i,:] = k[i,:] / np.linalg.norm(k[i,:]) * 2 * np.pi / wavelength
+            self.k[i,:] = ((k[i,:] / np.linalg.norm(k[i,:])) * 2 * np.pi) / wavelength
         self.t0 = t0
         self.phases = phases
         self.wavelength = wavelength
@@ -133,8 +133,11 @@ class Wavelets(object):
         self.intensity = np.ones(self.n)
         self.surface_index = np.zeros(self.n,dtype=np.int64)
 
-    def calc_t_of_wavelet(self, index, point, n=1.0):
-        return np.sqrt(np.sum(np.square(np.subtract(self.r[index,:], point)))) / (c/n) + self.t0[index]
+    def calc_optical_path_of_wavelet(self, index, point, n=1.0):
+        f = (c/n) / self.wavelength
+        #return np.sqrt(np.sum(np.square(np.subtract(self.r[index,:], point)))) / (c/n) + self.t0[index]
+        #self.phases[index] += np.dot(np.subtract(self.r[index,:], point),self.k[index,:])*n
+        self.phases[index] += 2 * cmath.pi * f *np.sqrt(np.sum(np.square(np.subtract(self.r[index,:], point)))) / (c/n)
 
     def calc_field(self, points, t, n=1.0):
         f = (c/n) / self.wavelength
@@ -152,7 +155,7 @@ class Wavelets(object):
         field = np.real(cmath.exp(1j *( -2 * cmath.pi * f * (t - self.t0[index]) + self.phases[index])))
         return field#*rotate_vector(self.k[index,:],np.pi/2) / np.linalg.norm(self.k[index,:])
 
-    def phase_at_r(self,index):
+    def phasor_at_r(self,index):
         n = 1.0
         f = (c/n) / self.wavelength
         phase = 2 * cmath.pi * f * self.t0[index] + self.phases[index]
@@ -236,7 +239,7 @@ spec_Surface = [
     ('n2', float64),
     ('midpoints', float64[:, :]),
     ('field', float64[:,:]),
-    ('phase', complex128[:]),
+    ('phasor', complex128[:]),
     ('hits', int64[:]),
     ('normals', float64[:, :]),
     ('count', int64),
@@ -259,7 +262,7 @@ class Surface(object):
             self.normals[i] = normal
 
         self.field = np.zeros((self.midpoints.shape[0],2),np.float64)
-        self.phase = np.zeros(self.midpoints.shape[0],dtype=np.complex128)
+        self.phasor = np.zeros(self.midpoints.shape[0],dtype=np.complex128)
         self.hits = np.zeros(self.midpoints.shape[0],dtype=np.int64)
         self.count = 0
 
@@ -325,11 +328,12 @@ class Surface(object):
                     absorbed = False
 
             if not absorbed:
-                t = wavelets.calc_t_of_wavelet(index,self.midpoints[surface_index,:],self.n1)
+                #wavelets.calc_optical_path_of_wavelet(index, self.midpoints[surface_index, :], self.n1)
+                wavelets.calc_optical_path_of_wavelet(index, point, self.n1)
                 #k = k / np.linalg.norm(k) * 2 * np.pi / wavelets.wavelength
-                return surface_index, point, new_k, t, True
+                return surface_index, point, new_k, True
 
-        return -1, np.array([0.0, 0.0]),np.array([0.0, 0.0]), 0.0, False
+        return -1, np.array([0.0, 0.0]),np.array([0.0, 0.0]), False
 
     def add_field_from_wavelets(self,wavelets):
         self.count += wavelets.n
@@ -346,7 +350,7 @@ class Surface(object):
         for i in range(wavelets.n):
             j = wavelets.surface_index[i]
             #self.phase[j] += ( (wavelets.phase_at_r(i)  ) + self.phase[j] )/2
-            self.phase[j] += wavelets.phase_at_r(i)
+            self.phasor[j] += wavelets.phasor_at_r(i)
             self.hits[j] += 1
 
     def interact_with_all_wavelets(self, wavelets):
@@ -362,7 +366,7 @@ class Surface(object):
         hit = False
 
         for i in range(wavelets.n):
-            surface_index, point, k, t, hit = self.interact_with_wavelet(wavelets,i)
+            surface_index, point, k, hit = self.interact_with_wavelet(wavelets,i)
             hits[i] = hit
             rs[i] = point
             ks[i] = k

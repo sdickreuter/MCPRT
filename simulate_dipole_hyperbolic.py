@@ -14,15 +14,15 @@ from mcprt import *
 import progress
 
 c = 2.998e8  # m/s
-wl = 0.000001#0.00001
+wl = 0.0005#0.00001
 
-plotit = True
+plotit = False
 
-iterations = 10000#500#200
+iterations = 10#500#200
 
 theta = 0#np.pi/2
 
-num = 100#1024#2048
+num = 1000#1024#2048
 
 lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
 lense2 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
@@ -77,7 +77,7 @@ dx = [-0.041]
 for d in dx:
 
     num = 100
-    ys = np.linspace(-wl*30, wl*30, num)
+    ys = np.linspace(-wl*50, wl*50, num)
     #xs = np.repeat(lense2.x+lense2._calc_f_back(), num)
     xs = np.repeat(lense2.back.points[:,0].max()+lense2.f, num)+d#-0.0405#+0.0001#-0.015
     print('focus x: '+str(lense2.back.points[:,0].max()+lense2.f))
@@ -107,7 +107,7 @@ for d in dx:
     onscreen = screen.interact_with_all_wavelets(onlense2_back)
 
     print("onscreen: " + str(onscreen.n))
-    screen.add_phase_from_wavelets(onscreen)
+    #screen.add_phase_from_wavelets(onscreen)
 
     # x = []
     # y = []
@@ -192,7 +192,7 @@ for d in dx:
     screen.clear()
 
     prog = progress.Progress(max=iterations)
-    num=1000
+    num=10000
     for i in range(iterations):
 
         dipole = make_dipole(wl,theta, alpha_max, num,mode='ray')
@@ -222,14 +222,22 @@ for d in dx:
 
     #print(screen.field.shape)
     #intensity = screen.field[:,0]**2#np.sum(screen.field ** 2,axis=1)
-    print(screen.phase)
-    intensity = screen.phase.real**2# np.cos(screen.phase)**2
+    print(screen.phasor)
+    intensity = np.abs(screen.phasor)**2# np.cos(screen.phase)**2
 
     plt.plot(screen.midpoints[:,1],intensity)
     plt.xlabel("position on screen / m")
     plt.ylabel("intensity / a.u.")
     plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen.png", dpi=600)
-    #plt.show()
+    plt.show()
+    plt.close()
+
+    plt.plot(screen.midpoints[:, 1], screen.phasor.real)
+    plt.plot(screen.midpoints[:, 1], screen.phasor.imag)
+    plt.xlabel("position on screen / m")
+    plt.ylabel("phase / a.u.")
+    # plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen.png", dpi=600)
+    plt.show()
     plt.close()
 
 
@@ -237,11 +245,10 @@ for d in dx:
     plt.xlabel("position on screen / m")
     plt.ylabel("number of hits")
     plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen_hits.png", dpi=600)
-    #plt.show()
+    plt.show()
     plt.close()
 
 
-    np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen.csv",np.vstack([screen.midpoints[:,1],intensity]).T)
-
-    np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen_hits.csv",np.vstack([screen.midpoints[:,1],screen.hits]).T)
+    #np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen.csv",np.vstack([screen.midpoints[:,1],intensity]).T)
+    #np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen_hits.csv",np.vstack([screen.midpoints[:,1],screen.hits]).T)
 
