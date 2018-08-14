@@ -14,15 +14,15 @@ from mcprt import *
 import progress
 
 c = 2.998e8  # m/s
-wl = 0.001#0.00001
+wl = 0.000001#0.00001
 
-plotit = False
+plotit = True
 
-iterations = 500#200
+iterations = 10000#500#200
 
 theta = 0#np.pi/2
 
-num = 128#1024#2048
+num = 100#1024#2048
 
 lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
 lense2 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
@@ -71,13 +71,13 @@ print("alpha_max: "+str(alpha_max)+'  '+str(alpha_max*180/np.pi))
 # plt.close()
 
 #dx = np.linspace(-0.1,0.1,100)
-dx = [-0.0412]
+dx = [-0.041]
 #dx = np.linspace(-0.01,0.01,20) - 0.041
 
 for d in dx:
 
     num = 100
-    ys = np.linspace(-wl*20, wl*20, num)
+    ys = np.linspace(-wl*30, wl*30, num)
     #xs = np.repeat(lense2.x+lense2._calc_f_back(), num)
     xs = np.repeat(lense2.back.points[:,0].max()+lense2.f, num)+d#-0.0405#+0.0001#-0.015
     print('focus x: '+str(lense2.back.points[:,0].max()+lense2.f))
@@ -157,7 +157,7 @@ for d in dx:
         # plt.close()
 
 
-        divider = 50000#200
+        divider = 2000#200
         plt.plot(dipole.r[:, 0], dipole.r[:, 1])
         for i in range(dipole.r.shape[0]):
             #plt.plot(dipole.r[i, 0], dipole.r[i, 1], "bo")
@@ -223,7 +223,7 @@ for d in dx:
     #print(screen.field.shape)
     #intensity = screen.field[:,0]**2#np.sum(screen.field ** 2,axis=1)
     print(screen.phase)
-    intensity = screen.phase# np.cos(screen.phase)**2
+    intensity = screen.phase.real**2# np.cos(screen.phase)**2
 
     plt.plot(screen.midpoints[:,1],intensity)
     plt.xlabel("position on screen / m")
@@ -240,8 +240,6 @@ for d in dx:
     #plt.show()
     plt.close()
 
-    print(intensity.shape)
-    print(screen.midpoints[:,1].shape)
 
     np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen.csv",np.vstack([screen.midpoints[:,1],intensity]).T)
 

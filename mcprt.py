@@ -146,7 +146,7 @@ class Wavelets(object):
                                                      - 2 * cmath.pi * f * (t - self.t0[i]) + self.phases[i])))
         return np.real(field)
 
-    def field_at_r(self,index):
+    def field_at_r(self,t,index):
         n = 1.0
         f = (c/n) / self.wavelength
         field = np.real(cmath.exp(1j *( -2 * cmath.pi * f * (t - self.t0[index]) + self.phases[index])))
@@ -156,7 +156,8 @@ class Wavelets(object):
         n = 1.0
         f = (c/n) / self.wavelength
         phase = 2 * cmath.pi * f * self.t0[index] + self.phases[index]
-        return phase#*rotate_vector(self.k[index,:],np.pi/2) / np.linalg.norm(self.k[index,:])
+        #phase = phase % (np.pi * 2)
+        return  cmath.exp(1j*phase)#.real, cmath.exp(1j*phase).imag  #*rotate_vector(self.k[index,:],np.pi/2) / np.linalg.norm(self.k[index,:])
 
     def calc_probability_of_wavelet(self,index, point1, point2):
         v1 = np.subtract(point1,self.r[index, :])
@@ -235,7 +236,7 @@ spec_Surface = [
     ('n2', float64),
     ('midpoints', float64[:, :]),
     ('field', float64[:,:]),
-    ('phase', float64[:]),
+    ('phase', complex128[:]),
     ('hits', int64[:]),
     ('normals', float64[:, :]),
     ('count', int64),
@@ -258,7 +259,7 @@ class Surface(object):
             self.normals[i] = normal
 
         self.field = np.zeros((self.midpoints.shape[0],2),np.float64)
-        self.phase = np.zeros(self.midpoints.shape[0],dtype=np.float64)
+        self.phase = np.zeros(self.midpoints.shape[0],dtype=np.complex128)
         self.hits = np.zeros(self.midpoints.shape[0],dtype=np.int64)
         self.count = 0
 
@@ -344,7 +345,8 @@ class Surface(object):
 
         for i in range(wavelets.n):
             j = wavelets.surface_index[i]
-            self.phase[j] += (wavelets.phase_at_r(i)-self.phase[j])/2
+            #self.phase[j] += ( (wavelets.phase_at_r(i)  ) + self.phase[j] )/2
+            self.phase[j] += wavelets.phase_at_r(i)
             self.hits[j] += 1
 
     def interact_with_all_wavelets(self, wavelets):
