@@ -14,7 +14,7 @@ from mcprt import *
 import progress
 
 c = 2.998e8  # m/s
-wl = 0.0005#0.00001
+wl = 0.01#0.00001
 
 plotit = False
 
@@ -77,7 +77,7 @@ dx = [-0.041]
 for d in dx:
 
     num = 100
-    ys = np.linspace(-wl*50, wl*50, num)
+    ys = np.linspace(-wl*20, wl*20, num)
     #xs = np.repeat(lense2.x+lense2._calc_f_back(), num)
     xs = np.repeat(lense2.back.points[:,0].max()+lense2.f, num)+d#-0.0405#+0.0001#-0.015
     print('focus x: '+str(lense2.back.points[:,0].max()+lense2.f))
