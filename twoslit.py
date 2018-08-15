@@ -21,13 +21,13 @@ plotit = True
 iterations = 1#200
 
 
-num = 200
+num = 1000
 ys = np.linspace(-1.0, 1.0, num)
 xs = np.repeat(10.0, num)
 screen = Surface(np.vstack((xs, ys)).T, reflectivity=0.0, transmittance=1.0, n1=1.0, n2=1.0)
 screen.flip_normals()
 
-n = 50000
+n = 10000000
 hits = np.zeros(n, dtype=np.float64)
 rs = np.zeros((n, 2), dtype=np.float64)
 ks = np.zeros((n, 2), dtype=np.float64)
@@ -40,7 +40,7 @@ ks = unit_vector(ks)
 rs[:,1] = np.linspace(-0.01,0.01,n)+0.1
 a = Wavelets(rs,ks,ts,wl,ps,mode=modes['spherical'])
 
-n = 50000
+n = 10000000
 hits = np.zeros(n, dtype=np.float64)
 rs = np.zeros((n, 2), dtype=np.float64)
 ks = np.zeros((n, 2), dtype=np.float64)
@@ -71,26 +71,28 @@ for i in range(iterations):
     prog.next()
     print(str(np.round(prog.percent,1))+'%  ' + str(prog.eta_td))
 
-intensity = np.abs(screen.phase) ** 2  # np.cos(screen.phase)**2
+intensity = np.abs(screen.phasor) ** 2  # np.cos(screen.phase)**2
 
 plt.plot(screen.midpoints[:, 1], intensity)
 plt.xlabel("position on screen / m")
 plt.ylabel("intensity / a.u.")
-#plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen.png", dpi=600)
+plt.savefig("twoslit_onscreen.png", dpi=600)
 plt.show()
 plt.close()
 
-plt.plot(screen.midpoints[:, 1], screen.phase.real)
-plt.plot(screen.midpoints[:, 1], screen.phase.imag)
-plt.xlabel("position on screen / m")
-plt.ylabel("phase / a.u.")
-#plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen.png", dpi=600)
-plt.show()
-plt.close()
+# plt.plot(screen.midpoints[:, 1], screen.phasor.real)
+# plt.plot(screen.midpoints[:, 1], screen.phasor.imag)
+# plt.xlabel("position on screen / m")
+# plt.ylabel("phase / a.u.")
+# #plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen.png", dpi=600)
+# plt.show()
+# plt.close()
+#
+# plt.plot(screen.midpoints[:, 1], screen.hits)
+# plt.xlabel("position on screen / m")
+# plt.ylabel("number of hits")
+# #plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen_hits.png", dpi=600)
+# plt.show()
+# plt.close()
 
-plt.plot(screen.midpoints[:, 1], screen.hits)
-plt.xlabel("position on screen / m")
-plt.ylabel("number of hits")
-#plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen_hits.png", dpi=600)
-plt.show()
-plt.close()
+np.savetxt("twoslit_onscreen.csv",np.vstack([screen.midpoints[:,1],intensity]).T)

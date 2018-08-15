@@ -18,11 +18,11 @@ wl = 0.01#0.00001
 
 plotit = False
 
-iterations = 10#500#200
+iterations = 1#500#200
 
 theta = 0#np.pi/2
 
-num = 1000#1024#2048
+num = 512#1024#2048
 
 lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
 lense2 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
@@ -76,8 +76,8 @@ dx = [-0.041]
 
 for d in dx:
 
-    num = 100
-    ys = np.linspace(-wl*20, wl*20, num)
+    num = 500
+    ys = np.linspace(-wl*10, wl*10, num)
     #xs = np.repeat(lense2.x+lense2._calc_f_back(), num)
     xs = np.repeat(lense2.back.points[:,0].max()+lense2.f, num)+d#-0.0405#+0.0001#-0.015
     print('focus x: '+str(lense2.back.points[:,0].max()+lense2.f))
@@ -192,7 +192,7 @@ for d in dx:
     screen.clear()
 
     prog = progress.Progress(max=iterations)
-    num=10000
+    num=5000000
     for i in range(iterations):
 
         dipole = make_dipole(wl,theta, alpha_max, num,mode='ray')
