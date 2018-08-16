@@ -16,13 +16,13 @@ import progress
 c = 2.998e8  # m/s
 wl = 0.01#0.00001
 
-plotit = False
+plotit = True
 
-iterations = 1#500#200
+iterations = 300#500#200
 
 theta = 0#np.pi/2
 
-num = 512#1024#2048
+num = 1024#2048
 
 lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
 lense2 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
@@ -157,7 +157,7 @@ for d in dx:
         # plt.close()
 
 
-        divider = 2000#200
+        divider = 300#200
         plt.plot(dipole.r[:, 0], dipole.r[:, 1])
         for i in range(dipole.r.shape[0]):
             #plt.plot(dipole.r[i, 0], dipole.r[i, 1], "bo")
@@ -192,7 +192,7 @@ for d in dx:
     screen.clear()
 
     prog = progress.Progress(max=iterations)
-    num=5000000
+    num=10000#2000000
     for i in range(iterations):
 
         dipole = make_dipole(wl,theta, alpha_max, num,mode='ray')
@@ -209,11 +209,18 @@ for d in dx:
         onlense2_back = lense2.back.interact_with_all_wavelets(onlense2_front)
 
         onlense2_back = lense2.back.interact_with_all_wavelets(onlense2_front)
+
         onlense2_back.mode = modes['gaussian']
         onscreen = screen.interact_with_all_wavelets(onlense2_back)
 
         #screen.add_field_from_wavelets(onscreen)
         screen.add_phase_from_wavelets(onscreen)
+
+        # plt.plot(screen.midpoints[onscreen.surface_index, 1],onscreen.phases,'b.')
+        # plt.xlabel("position on screen / m")
+        # plt.ylabel("t / a.u.")
+        # plt.show()
+        # plt.close()
 
         print(str(i) + " count on screen1: " + str(screen.count))
         prog.next()
@@ -232,13 +239,13 @@ for d in dx:
     plt.show()
     plt.close()
 
-    plt.plot(screen.midpoints[:, 1], screen.phasor.real)
-    plt.plot(screen.midpoints[:, 1], screen.phasor.imag)
-    plt.xlabel("position on screen / m")
-    plt.ylabel("phase / a.u.")
-    # plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen.png", dpi=600)
-    plt.show()
-    plt.close()
+    # plt.plot(screen.midpoints[:, 1], screen.phasor.real)
+    # plt.plot(screen.midpoints[:, 1], screen.phasor.imag)
+    # plt.xlabel("position on screen / m")
+    # plt.ylabel("phase / a.u.")
+    # # plt.savefig("dipole_" + str(int(np.round(theta * 180 / np.pi))) + "_theta_" + str(d) + "_onscreen.png", dpi=600)
+    # plt.show()
+    # plt.close()
 
 
     plt.plot(screen.midpoints[:,1],screen.hits)
