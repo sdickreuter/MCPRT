@@ -228,13 +228,13 @@ for d in dx:
 
 
     #print(screen.field.shape)
-    #intensity = screen.field[:,0]**2#np.sum(screen.field ** 2,axis=1)
+    #intensities = screen.field[:,0]**2#np.sum(screen.field ** 2,axis=1)
     print(screen.phasor)
     intensity = np.abs(screen.phasor)**2# np.cos(screen.phase)**2
 
     plt.plot(screen.midpoints[:,1],intensity)
     plt.xlabel("position on screen / m")
-    plt.ylabel("intensity / a.u.")
+    plt.ylabel("intensities / a.u.")
     plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen.png", dpi=600)
     plt.show()
     plt.close()
@@ -256,6 +256,6 @@ for d in dx:
     plt.close()
 
 
-    #np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen.csv",np.vstack([screen.midpoints[:,1],intensity]).T)
+    #np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen.csv",np.vstack([screen.midpoints[:,1],intensities]).T)
     #np.savetxt("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_"+str(d)+"_onscreen_hits.csv",np.vstack([screen.midpoints[:,1],screen.hits]).T)
 

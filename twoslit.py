@@ -2,9 +2,8 @@ import locale
 
 locale.setlocale(locale.LC_NUMERIC, 'C')
 
-import matplotlib as mpl
-
-mpl.use('TkAgg')
+#import matplotlib as mpl
+#mpl.use('TkAgg')
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +17,7 @@ wl = 0.001#0.00001
 
 plotit = True
 
-iterations = 1#200
+iterations = 1000#200
 
 
 num = 1000
@@ -27,7 +26,7 @@ xs = np.repeat(10.0, num)
 screen = Surface(np.vstack((xs, ys)).T, reflectivity=0.0, transmittance=1.0, n1=1.0, n2=1.0)
 screen.flip_normals()
 
-n = 10000000
+n = 10000
 hits = np.zeros(n, dtype=np.float64)
 rs = np.zeros((n, 2), dtype=np.float64)
 ks = np.zeros((n, 2), dtype=np.float64)
@@ -40,7 +39,7 @@ ks = unit_vector(ks)
 rs[:,1] = np.linspace(-0.01,0.01,n)+0.1
 a = Wavelets(rs,ks,ts,wl,ps,mode=modes['spherical'])
 
-n = 10000000
+n = 10000
 hits = np.zeros(n, dtype=np.float64)
 rs = np.zeros((n, 2), dtype=np.float64)
 ks = np.zeros((n, 2), dtype=np.float64)
@@ -75,7 +74,7 @@ intensity = np.abs(screen.phasor) ** 2  # np.cos(screen.phase)**2
 
 plt.plot(screen.midpoints[:, 1], intensity)
 plt.xlabel("position on screen / m")
-plt.ylabel("intensity / a.u.")
+plt.ylabel("intensities / a.u.")
 plt.savefig("twoslit_onscreen.png", dpi=600)
 plt.show()
 plt.close()

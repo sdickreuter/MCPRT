@@ -108,7 +108,7 @@ spec_Wavelets = [
     ('k', float64[:,:]),
     ('t0', float64[:]),
     ('phases', float64[:]),
-    ('intensity', float64[:]),
+    ('intensities', float64[:]),
     ('surface_index', int64[:]),
     ('wavelength', float64),
     #('f', float64),
@@ -132,6 +132,13 @@ class Wavelets(object):
         self.mode = mode
         self.intensity = np.ones(self.n)
         self.surface_index = np.zeros(self.n,dtype=np.int64)
+
+
+
+#@njit(void(ExposurePoints.class_type.instance_type, ContourPoints.class_type.instance_type), parallel=False)
+#def calc_forces(epoints, cpoints):
+
+
 
     def calc_optical_path_of_wavelet(self, index, point, n=1.0):
         f = (c/n) / self.wavelength

@@ -220,7 +220,7 @@ for i in range(iterations):
 
 plt.plot(screen.midpoints[:,1],screen.field ** 2)
 plt.xlabel("position on screen / m")
-plt.ylabel("intensity / a.u.")
+plt.ylabel("intensities / a.u.")
 plt.savefig("dipole_"+str(int(np.round(theta*180/np.pi)))+"_theta_onscreen.png", dpi=600)
 plt.show()
 plt.close()
