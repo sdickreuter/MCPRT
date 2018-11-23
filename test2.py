@@ -35,7 +35,7 @@ lense2.shift(dx=lense1.back.points[:,0].max()+lense1.f)
 alpha_max = np.abs(angle_between(np.array([1,0],dtype=np.float64),lense1.front.points[0,:]))#np.pi/10)
 print("alpha_max: "+str(alpha_max)+'  '+str(alpha_max*180/np.pi))
 
-d = -0.041
+d = -0.040#-0.041
 
 num = 200#500
 ys = np.linspace(-wl*10, wl*10, num)
@@ -54,29 +54,29 @@ screen.flip_normals()
 #     print(i)
 #
 
-num = 30#10000#50000
+num = 30000#10000#50000
 dipole = make_dipole(wl,theta, alpha_max,num,'ray')
 
-lense1.front.interact_with_all_wavelets(dipole)
+lense1.front.interact_with_all_wavelets_rays(dipole)
 onlense1_front = generate_wavelets_from_surface(lense1.front,num,wl)
 
-lense1.back.interact_with_all_wavelets(onlense1_front)
+lense1.back.interact_with_all_wavelets_rays(onlense1_front)
 onlense1_back = generate_wavelets_from_surface(lense1.back,num,wl)
 
-lense2.front.interact_with_all_wavelets(onlense1_back)
+lense2.front.interact_with_all_wavelets_rays(onlense1_back)
 onlense2_front = generate_wavelets_from_surface(lense2.front,num,wl)
 
-lense2.back.interact_with_all_wavelets(onlense2_front)
+lense2.back.interact_with_all_wavelets_rays(onlense2_front)
 onlense2_back = generate_wavelets_from_surface(lense2.back,num,wl)
 
-onlense2_back.mode = modes['gaussian']
-screen.interact_with_all_wavelets(onlense2_back)
+screen.interact_with_all_wavelets_rays(onlense2_back)
 onscreen = generate_wavelets_from_surface(screen,num,wl)
 
 plot_all(lense1.front,onlense1_front,"lense 1 front")
 plot_all(lense1.back,onlense1_back,"lense 1 back")
 plot_all(lense2.front,onlense2_front,"lense 2 front")
 plot_all(lense2.back,onlense2_back,"lense 2 back")
+plot_all(screen,onscreen,"screen")
 
 #
 # print("onscreen: " + str(onscreen.n))
@@ -172,26 +172,29 @@ lense2.back.clear()
 screen.clear()
 
 prog = progress.Progress(max=iterations)
-num = 10000#50000
+num = 100000#50000
 dipole = make_dipole(wl,theta, alpha_max,num,'ray')
 
-lense1.front.interact_with_all_wavelets(dipole)
+lense1.front.interact_with_all_wavelets_rays(dipole)
 onlense1_front = generate_wavelets_from_surface(lense1.front,num,wl)
 
-lense1.back.interact_with_all_wavelets(onlense1_front)
+lense1.back.interact_with_all_wavelets_rays(onlense1_front)
 onlense1_back = generate_wavelets_from_surface(lense1.back,num,wl)
 
-lense2.front.interact_with_all_wavelets(onlense1_back)
+lense2.front.interact_with_all_wavelets_rays(onlense1_back)
 onlense2_front = generate_wavelets_from_surface(lense2.front,num,wl)
 
-lense2.back.interact_with_all_wavelets(onlense2_front)
+lense2.back.interact_with_all_wavelets_rays(onlense2_front)
+onlense2_back = generate_wavelets_from_surface(lense2.back, num, wl)
+onlense2_back.mode = modes['gaussian']
 
 for i in range(iterations):
-    onlense2_back = generate_wavelets_from_surface(lense2.back, num*10, wl)
-    onlense2_back.mode = modes['gaussian']
-    screen.interact_with_all_wavelets(onlense2_back)
+    # onlense2_back = generate_wavelets_from_surface(lense2.back, num*10, wl)
+    # onlense2_back.mode = modes['gaussian']
+    # screen.interact_with_all_wavelets(onlense2_back)
 
-
+    onscreen = screen.interact_with_all_wavelets_other(onlense2_back)
+    #screen.add_phase_from_wavelets(onscreen)
     # plt.plot(screen.midpoints[onscreen.surface_index, 1],onscreen.phases,'b.')
     # plt.xlabel("position on screen / m")
     # plt.ylabel("t / a.u.")

@@ -174,6 +174,7 @@ class Wavelets(object):
         f = (c/n) / self.wavelength
         phase = 2 * cmath.pi * f * self.t0[index] + self.phases[index]
         #phase = phase % (np.pi * 2)
+        #print(cmath.exp(1j*phase))
         return  cmath.exp(1j*phase)#.real, cmath.exp(1j*phase).imag  #*rotate_vector(self.k[index,:],np.pi/2) / np.linalg.norm(self.k[index,:])
 
     def calc_probability_of_wavelet(self,index, point1, point2):
@@ -373,12 +374,8 @@ class Surface(object):
             self.phasor[j] += wavelets.phasor_at_r(i)
             self.hits[j] += 1
 
-    def interact_with_all_wavelets(self, wavelets):
 
-        #r = np.zeros(2)
-        #k = np.zeros(2)
-        #t = 0.0
-        #hit = False
+    def interact_with_all_wavelets_rays(self, wavelets):
 
         for i in range(wavelets.n):
             surface_index, point, k, hit = self.interact_with_wavelet(wavelets,i)
@@ -395,6 +392,40 @@ class Surface(object):
         self.ts /= self.hits
         for i in range(self.ks.shape[0]):
             self.ks[i,:] = ((self.ks[i,:] / np.linalg.norm(self.ks[i,:])) * 2 * np.pi) / wavelets.wavelength
+
+    def interact_with_all_wavelets_other(self, wavelets):
+        hits = np.zeros(wavelets.n, dtype=np.float64)
+        rs = np.zeros((wavelets.n,2), dtype=np.float64)
+        ks = np.zeros((wavelets.n,2), dtype=np.float64)
+        ts = np.zeros(wavelets.n, dtype=np.float64)
+        s_index = np.zeros(wavelets.n,dtype=np.int64)
+        intensities = np.zeros(wavelets.n, dtype=np.float64)
+
+        r = np.zeros(2)
+        k = np.zeros(2)
+        t = 0.0
+        hit = False
+
+        for i in range(wavelets.n):
+            surface_index, point, k, hit = self.interact_with_wavelet(wavelets,i)
+            intensities[i] += wavelets.intensities[i]
+            hits[i] = hit
+            rs[i] = point
+            ks[i] = k
+            ts[i] = t
+            s_index[i] = surface_index
+            self.phasor[surface_index] += wavelets.phasor_at_r(i)
+            self.hits[surface_index] += 1
+
+        self.ts /= self.hits
+        self.count += np.sum(hits)
+        #indices = (hits > 0)
+        #intensities = np.ones(len(indices))
+        #new_wavelets = Wavelets(rs[indices,:],ks[indices,:],ts[indices],wavelets.wavelength,intensities,wavelets.phases[indices],wavelets.mode)
+        #new_wavelets.surface_index = s_index[indices]
+        #return new_wavelets
+
+
 
     def clear(self):
         self.field = np.zeros((self.midpoints.shape[0], 2), np.float64)
