@@ -15,7 +15,7 @@ from scipy.signal import savgol_filter
 from scipy import interpolate
 
 c = 1.0#2.998e8  # m/s
-wl = 0.01#0.00001
+wl = 1.0#0.00001
 
 plotit = False
 

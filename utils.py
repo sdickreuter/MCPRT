@@ -24,6 +24,13 @@ def rotate_vector(vector, theta):
     #return np.matmul(R, vector)
     return R @ vector
 
+@njit
+def rotate_complex(c, theta):
+    rotated = rotate_vector(np.array([c.real,c.imag]),theta)
+    return rotated[0]+1j*rotated[1]
+
+
+
 # @jit(nopython=True)
 # def gen_rotation_matrix(theta):
 #     c, s = np.cos(theta), np.sin(theta)

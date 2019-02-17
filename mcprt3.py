@@ -127,7 +127,7 @@ def interact_dipole_with_surface(dipole, surf):
                 #if alpha - np.pi / 2 < 0:
                 #    phase += np.pi
                 #phasor = rotate_vector(np.array([1.0,0.0]), phase) * intensity
-                phasor = np.exp(1j*phase) * intensity
+                phasor = rotate_complex(1 + 0 * 1j, phase) * intensity
                 surf.phasors[i] = surf.phasors[i] + phasor
                 new_dipoles.append(Dipole(surf.midpoints[i, :],
                                           trans_k,
@@ -155,9 +155,8 @@ def interact_dipoles_with_surface(dipoles, surf):
                     # if alpha - np.pi / 2 < 0:
                     #    phase += np.pi
                     #phasor = rotate_vector(np.array([1.0, 0.0]), phase) * intensity
-                    phasor = np.exp(1j * phase) * intensity
+                    phasor = rotate_complex(1+0*1j,phase) * intensity
                     surf.phasors[i] = surf.phasors[i] + phasor
-
                     new_dipoles.append(Dipole(surf.midpoints[i, :],
                                           trans_k,
                                           phasor,
