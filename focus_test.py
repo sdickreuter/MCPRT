@@ -39,26 +39,27 @@ dipoles = []
 for y in ys:
     dipoles.append(Dipole(np.array([-1.0,y]), np.array([1.0,0.0]), np.array([1.0,0.0]), wl))
 
-interact_dipoles_with_surface(dipoles, lense1.front)
-onlense1_front = generate_dipoles_from_surface(lense1.front)
+onlense1_front = interact_dipoles_with_surface(dipoles, lense1.front)
 plot_all(lense1.front,onlense1_front,"lense 1 front")
-#print(lense1.front.ks)
+print(len(onlense1_front))
 
-interact_dipoles_with_surface(onlense1_front, lense1.back)
-onlense1_back = generate_dipoles_from_surface(lense1.back)
+
+onlense1_back = interact_dipoles_with_surface(onlense1_front, lense1.back)
 plot_all(lense1.back,onlense1_back,"lense 1 back")
+print(len(onlense1_back))
 
 
-interact_dipoles_with_surface(onlense1_back, screen)
-onscreen = generate_dipoles_from_surface(screen)
+onscreen = interact_dipoles_with_surface(onlense1_back, screen)
+print(len(onscreen))
+
 #plot_all(screen,onscreen,"screen")
-# plt.plot(screen.points[:, 0], screen.points[:, 1], 'bx')
-# n = screen.normals / np.sqrt(screen.normals[:, 0].max() ** 2 + screen.normals[:, 1].max() ** 2)
-# for i in range(n.shape[0]):
-#     n[i, :] *= length(screen.phasors[i, :])
-# plt.quiver(screen.points[:, 0], screen.points[:, 1], n[:, 0], n[:, 1])
-# plt.title("screen normals")
-# plt.show()
+plt.plot(screen.points[:, 0], screen.points[:, 1], 'bx')
+n = screen.phasors / np.sqrt(screen.phasors[:, 0].max() ** 2 + screen.phasors[:, 1].max() ** 2)
+for i in range(n.shape[0]):
+    n[i, :] *= length(screen.phasors[i, :])
+plt.quiver(screen.points[:, 0], screen.points[:, 1], n[:, 0], n[:, 1])
+plt.title("screen normals")
+plt.show()
 y = np.sqrt(screen.phasors[:,0]**2+screen.phasors[:,1]**2)
 plt.plot(y)
 plt.show()
