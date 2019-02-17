@@ -13,13 +13,14 @@ from mcprt3 import *
 import progress
 from scipy.signal import savgol_filter
 from scipy import interpolate
+import time
 
 c = 1.0#2.998e8  # m/s
 wl = 1.0#0.00001
 
 plotit = False
 
-num = 100#1024#2048
+num = 60#1024#2048
 
 lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
 lense1._make_surfaces(flipped=True)
@@ -39,17 +40,21 @@ dipoles = []
 for y in ys:
     dipoles.append(Dipole(np.array([-1.0,y]), np.array([1.0,0.0]), 1+0*1j, wl))
 
+print('Start interact with lense1.front')
 onlense1_front = interact_dipoles_with_surface(dipoles, lense1.front)
-plot_all(lense1.front,onlense1_front,"lense 1 front")
+#plot_all(lense1.front,onlense1_front,"lense 1 front")
 print(len(onlense1_front))
 
+print('Start interact with lense1.back')
+onlense1_back = interact_dipoles_with_surface_verbose(onlense1_front, lense1.back)
 
-onlense1_back = interact_dipoles_with_surface(onlense1_front, lense1.back)
-plot_all(lense1.back,onlense1_back,"lense 1 back")
+#plot_all(lense1.back,onlense1_back,"lense 1 back")
 print(len(onlense1_back))
 
+print('Start interact with screen')
+onscreen = interact_dipoles_with_surface_verbose(onlense1_back, screen)
 
-onscreen = interact_dipoles_with_surface(onlense1_back, screen)
+
 print(len(onscreen))
 
 #plot_all(screen,onscreen,"screen")
