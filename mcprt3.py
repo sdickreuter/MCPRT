@@ -124,7 +124,7 @@ def interact_dipole_with_surface(dipole, surf):
         phasor = rotate_vector(np.array([1.0,0.0]), phase) * intensity
         surf.phasors[i, :] = surf.phasors[i, :] + phasor
         trans_k = transmitted_k(v, surf.normals[i, :], surf.n1, surf.n2)
-        trans_k = unit_vector(trans_k)*intensity
+        trans_k = unit_vector(trans_k)#*intensity
         if not np.isnan(trans_k[0]):
             surf.ks[i, :] = surf.ks[i, :] + trans_k
     # for i in range(surf.ks.shape[0]):
@@ -133,7 +133,23 @@ def interact_dipole_with_surface(dipole, surf):
 @njit
 def interact_dipoles_with_surface(dipoles, surf):
     for d in dipoles:
-        interact_dipole_with_surface(d,surf)
+        #interact_dipole_with_surface(d,surf)
+        f = c / d.wavelength  # (c / surf.n1) / dipole.wavelength
+        for i in range(surf.midpoints.shape[0]):
+            surf.counts[i] += 1.0
+            v = surf.midpoints[i, :] - d.r
+            alpha = angle_between(d.k, v)
+            intensity = (np.cos(alpha)) ** 2
+            phase = 2 * np.pi * f * length(v) / (c / surf.n1) + angle(d.phasor)
+            # if alpha - np.pi / 2 < 0:
+            #    phase += np.pi
+            phasor = rotate_vector(np.array([1.0, 0.0]), phase) * intensity
+            surf.phasors[i, :] = surf.phasors[i, :] + phasor
+            trans_k = transmitted_k(v, surf.normals[i, :], surf.n1, surf.n2)
+            trans_k = unit_vector(trans_k)  # *intensity
+            if not np.isnan(trans_k[0]):
+                surf.ks[i, :] = surf.ks[i, :] + trans_k
+
 
 @njit
 def generate_dipoles_from_surface (surf):
