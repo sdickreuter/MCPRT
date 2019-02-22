@@ -136,6 +136,12 @@ def transmitted_k(k, normal, n1, n2):
 
 
 @njit
+def calcInt(alpha1,alpha2):
+    #return 2*(np.cos(alpha))**2/(np.pi)
+    #return integrate.quad(lambda x: 2*np.cos(x)**2/np.pi,alpha1,alpha2)
+    return ( -alpha1 - np.sin(alpha1)*np.cos(alpha1) + alpha2 + np.sin(alpha2)*np.cos(alpha2))/np.pi
+
+@njit
 def interact_dipole_with_surface(dipole, surf):
     new_dipoles = []
     f = (c / surf.n1) / dipole.wavelength
@@ -145,9 +151,12 @@ def interact_dipole_with_surface(dipole, surf):
         v = surf.midpoints[i, :] - dipole.r
         trans_k = transmitted_k(v, surf.normals[i, :], surf.n1, surf.n2)
         if not np.isnan(trans_k[0]):
-            alpha = angle_between(dipole.k, v)
-            intensity = (np.cos(alpha))**2
-            if intensity > 1e-6:
+            #alpha = angle_between(dipole.k, v)
+            #intensity = (np.cos(alpha))**2
+            alpha1 = angle_between(dipole.k, surf.points[i, :] - dipole.r)
+            alpha2 = angle_between(dipole.k, surf.points[i+1, :] - dipole.r)
+            intensity = calcInt(alpha1,alpha2)
+            if True: #intensity > 1e-20:
                 trans_k = unit_vector(trans_k)
                 surf.counts[i] += 1.0
                 phase = 2 * np.pi * f * length(v) / (c / surf.n1) + np.angle(dipole.phasor)
@@ -172,9 +181,12 @@ def interact_dipoles_with_surface(dipoles, surf):
             v = surf.midpoints[i, :] - d.r
             trans_k = transmitted_k(v, surf.normals[i, :], surf.n1, surf.n2)
             if not np.isnan(trans_k[0]):
-                alpha = angle_between(d.k, v)
-                intensity = (np.cos(alpha)) ** 2
-                if intensity > 1e-3:
+                #alpha = angle_between(d.k, v)
+                #intensity = (np.cos(alpha)) ** 2
+                alpha1 = angle_between(d.k, surf.points[i, :] - d.r)
+                alpha2 = angle_between(d.k, surf.points[i + 1, :] - d.r)
+                intensity = calcInt(alpha1, alpha2)
+                if True: #intensity > 1e-20:
                     trans_k = unit_vector(trans_k)
                     surf.counts[i] += 1.0
                     phase = 2 * np.pi * f * length(v) / (c / surf.n1) + np.angle(d.phasor)
@@ -189,6 +201,33 @@ def interact_dipoles_with_surface(dipoles, surf):
 
     return new_dipoles
 
+
+@njit
+def interact_dipoles_with_screen(dipoles, surf):
+    for d in dipoles:
+        #interact_dipole_with_surface(d,surf)
+        f = (c / surf.n1) / d.wavelength
+        #f = c / d.wavelength  # (c / surf.n1) / dipole.wavelength
+        for i in range(surf.midpoints.shape[0]):
+            v = surf.midpoints[i, :] - d.r
+            trans_k = transmitted_k(v, surf.normals[i, :], surf.n1, surf.n2)
+            if not np.isnan(trans_k[0]):
+                #alpha = angle_between(d.k, v)
+                #intensity = (np.cos(alpha)) ** 2
+                alpha1 = angle_between(d.k, surf.points[i, :] - d.r)
+                alpha2 = angle_between(d.k, surf.points[i + 1, :] - d.r)
+                intensity = calcInt(alpha1, alpha2)
+                if True: #intensity > 1e-20:
+                    #trans_k = unit_vector(trans_k)
+                    surf.counts[i] += 1.0
+                    phase = 2 * np.pi * f * length(v) / (c / surf.n1) + np.angle(d.phasor)
+                    # if alpha - np.pi / 2 < 0:
+                    #    phase += np.pi
+                    phasor = rotate_complex(1+0*1j,phase) * intensity
+                    surf.phasors[i] = surf.phasors[i] + phasor
+
+
+
 import time
 
 @jit
@@ -200,6 +239,16 @@ def interact_dipoles_with_surface_verbose(dipoles, surf, n = 10):
         new_dipoles += interact_dipoles_with_surface(list(dipoles[i]), surf)
         print('ETA ' + str(np.round((n - i) * (time.time() - start_time),1))+' s')
     return new_dipoles
+
+
+@jit
+def interact_dipoles_with_screen_verbose(dipoles, surf, n = 10):
+    dipoles = np.array_split(dipoles, n)
+    for i in range(len(dipoles)):
+        start_time = time.time()
+        interact_dipoles_with_screen(list(dipoles[i]), surf)
+        print('ETA ' + str(np.round((n - i) * (time.time() - start_time),1))+' s')
+
 
 class Lense(object):
 
