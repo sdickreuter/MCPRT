@@ -172,7 +172,7 @@ lense2.back.clear()
 screen.clear()
 
 prog = progress.Progress(max=iterations)
-num = 100000#50000
+num = 10000#50000
 dipole = make_dipole(wl,theta, alpha_max,num,'ray')
 
 lense1.front.interact_with_all_wavelets_rays(dipole)

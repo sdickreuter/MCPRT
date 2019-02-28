@@ -17,7 +17,8 @@ c = 1.0  # m/s
 spec_Dipole = [
     ('r', float64[:]),
     ('k', float64[:]),
-    ('phasor', complex128),
+    ('E'), complex128[:],
+    ('phase', float64),
     ('wavelength', float64),
 
 ]
@@ -27,12 +28,12 @@ Dipole_type = deferred_type()
 @jitclass(spec_Dipole)
 class Dipole(object):
 
-    def __init__(self, r, k, phasor, wavelength):
+    def __init__(self, r, k, E, phase, wavelength):
         self.r = r
         self.k = unit_vector(k)
-        self.phasor = phasor
+        self.E = E
+        self.phase = phase
         self.k = k * 2 * np.pi / wavelength
-        self.phasor = phasor
         self.wavelength = wavelength
 
 Dipole_type.define(Dipole.class_type.instance_type)
@@ -42,7 +43,8 @@ Dipole_type.define(Dipole.class_type.instance_type)
 spec_DipoleSet = [
     ('r', float64[:,:]),
     ('k', float64[:,:]),
-    ('phasor', complex128[:]),
+    ('E'), complex128[:,:],
+    ('phase', float64[:]),
     ('wavelength', float64),
 
 ]
@@ -52,12 +54,11 @@ DipoleSet_type = deferred_type()
 @jitclass(spec_DipoleSet)
 class DipoleSet(object):
 
-    def __init__(self, r, k, phasor, wavelength):
+    def __init__(self, r, k,E, phase, wavelength):
         self.r = r
         self.k = unit_vector(k)
-        self.phasor = phasor
+        self.phase = phase
         self.k = k * 2 * np.pi / wavelength
-        self.phasor = phasor
         self.wavelength = wavelength
 
 DipoleSet_type.define(DipoleSet.class_type.instance_type)
@@ -68,7 +69,7 @@ spec_Surface = [
     ('points', float64[:,:]),
     ('midpoints', float64[:, :]),
     ('normals', float64[:, :]),
-    ('phasors', complex128[:]),
+    ('E', complex128[:,:]),
     ('ks', float64[:, :]),
     ('counts', int64[:]),
     ('n1', float64),
@@ -97,7 +98,7 @@ class Surface(object):
             normal = unit_vector(normal)
             self.normals[i] = normal
 
-        self.phasors = np.ones((self.midpoints.shape[0]), dtype=np.complex128)
+        self.R = np.zeros((self.midpoints.shape[0],2), dtype=np.complex128)
         self.counts = np.zeros(self.midpoints.shape[0], dtype=np.int64)
 
     def _update_midpoints(self):
@@ -462,4 +463,13 @@ def plot_all(surf, dipoles,title=''):
         plt.quiver(d.r[0], d.r[1], k[0], k[1])
 
     plt.title(title + " dipoles k")
+    plt.show()
+
+
+def plot_phasor(surf):
+    fig, ax1 = plt.subplots()
+    #ax1.plot(np.abs(surf.phasors) ** 2, 'b-')
+    ax1.plot(np.real(surf.phasors) ** 2, 'b-')
+    ax2 = ax1.twinx()
+    ax2.plot(np.angle(surf.phasors), 'r-')
     plt.show()
