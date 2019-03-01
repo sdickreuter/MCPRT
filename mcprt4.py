@@ -11,12 +11,13 @@ from scipy import interpolate
 from utils import *
 
 #c = 2.998e8  # m/s
-c = 1.0  # m/s
+#c = 1.0  # m/s
 
 
 spec_Dipole = [
     ('r', float64[:]),
     ('k', float64[:]),
+    ('E0', float64),
     ('phase', float64),
     ('wavelength', float64),
 
@@ -27,11 +28,11 @@ Dipole_type = deferred_type()
 @jitclass(spec_Dipole)
 class Dipole(object):
 
-    def __init__(self, r, k, phase, wavelength):
+    def __init__(self, r, k,E0, phase, wavelength):
         self.r = r
-        self.k = unit_vector(k)
+        self.k = unit_vector(k) * 2 * np.pi / wavelength
+        self.E0 = E0
         self.phase = phase
-        self.k = k * 2 * np.pi / wavelength
         self.wavelength = wavelength
 
 Dipole_type.define(Dipole.class_type.instance_type)
@@ -42,6 +43,7 @@ spec_DipoleSet = [
     ('r', float64[:,:]),
     ('k', float64[:,:]),
     ('phase', float64[:]),
+    ('E0', float64[:]),
     ('wavelength', float64),
 
 ]
@@ -51,11 +53,11 @@ DipoleSet_type = deferred_type()
 @jitclass(spec_DipoleSet)
 class DipoleSet(object):
 
-    def __init__(self, r, k, phase, wavelength):
+    def __init__(self, r, k,E0, phase, wavelength):
         self.r = r
-        self.k = unit_vector(k)
+        self.E0 = E0
         self.phase = phase
-        self.k = k * 2 * np.pi / wavelength
+        self.k = unit_vector(k) * 2 * np.pi / wavelength
         self.wavelength = wavelength
 
 DipoleSet_type.define(DipoleSet.class_type.instance_type)
@@ -67,6 +69,7 @@ spec_Surface = [
     ('midpoints', float64[:, :]),
     ('normals', float64[:, :]),
     ('E', complex128[:,:]),
+    ('phasors', complex128[:]),
     ('ks', float64[:, :]),
     ('counts', int64[:]),
     ('n1', float64),
@@ -96,6 +99,7 @@ class Surface(object):
             self.normals[i] = normal
 
         self.E = np.zeros((self.midpoints.shape[0],2), dtype=np.complex128)
+        self.phasors = np.zeros(self.midpoints.shape[0], dtype=np.complex128)
         self.counts = np.zeros(self.midpoints.shape[0], dtype=np.int64)
 
     def _update_midpoints(self):
@@ -139,26 +143,35 @@ def calcInt(alpha1,alpha2):
     #return integrate.quad(lambda x: 2*np.cos(x)**2/np.pi,alpha1,alpha2)
     return ( -alpha1 - np.sin(alpha1)*np.cos(alpha1) + alpha2 + np.sin(alpha2)*np.cos(alpha2))/np.pi
 
+
+
+
 @njit
 def interact_dipole_with_surface(dipole, surf):
     new_dipoles = []
-    f = (c / surf.n1) / dipole.wavelength
+    #f = (c / surf.n1) / dipole.wavelength
     #f = c/ dipole.wavelength#(c / surf.n1) / dipole.wavelength
-    phasor = np.zeros((2))
     for i in range(surf.midpoints.shape[0]):
         r = surf.midpoints[i, :] - dipole.r
         alpha = angle_between(dipole.k, r)
-        E0 = np.sqrt(2) * np.sqrt(1+np.cos(alpha)/(2*dipole.wavelength))*np.exp(1j*dipole.k*r+1j*dipole.phase)/np.sqrt(length(r))
-        surf.E[i, :] += E0*unit_vector(rotate_vector(r,np.pi/2))
+        #E0 = np.sqrt(2) * np.sqrt(1 + np.cos(alpha) / (2 * dipole.wavelength)) * np.exp(
+        #    1j * np.dot(dipole.k * surf.n1, r) + 1j * dipole.phase) / np.sqrt(length(r))
+        E0 = np.sqrt(2) * np.sqrt(1 + np.cos(alpha) / (2 * dipole.wavelength)) * np.exp(
+            1j * np.dot(dipole.k * surf.n1, r) + 1j * dipole.phase) / np.sqrt(length(r))
+        dl = np.sqrt(np.sum(np.square(surf.points[i, :] - surf.points[i + 1, :])))
+        if not np.isnan(E0):
+            surf.E[i, :] += E0 * unit_vector(rotate_vector(r, np.pi / 2)) * dl*dipole.E0
 
-        trans_k = transmitted_k(rotate_vector(np.real(surf.E[i, :]), -np.pi / 2), surf.normals[i, :], surf.n1, surf.n2)
-        trans_k = unit_vector(trans_k)
-        #phase = 2 * np.pi * f * length(v) / (c / surf.n1) + dipole.phase
-        if not np.isnan(trans_k[0]):
-            new_dipoles.append(Dipole(surf.midpoints[i, :],
-                                      trans_k,
-                                      0.0,
-                                      dipole.wavelength))
+            trans_k = transmitted_k(rotate_vector(np.real(surf.E[i, :]), -np.pi / 2), surf.normals[i, :], surf.n1, surf.n2)
+            trans_k = unit_vector(trans_k)
+
+            if not np.isnan(trans_k[0]):
+                new_dipoles.append(Dipole(surf.midpoints[i, :],
+                                          trans_k,
+                                          length(np.real(surf.E[i,:])),
+                                          np.angle(np.sqrt(surf.E[i, 0] ** 2+surf.E[i, 1]**2)),
+                                          #np.angle(surf.phasors[i]),
+                                          dipole.wavelength))
     return new_dipoles
 
 @njit
@@ -172,18 +185,19 @@ def interact_dipoles_with_surface(dipoles, surf):
             r = surf.midpoints[i, :] - dipole.r
             alpha = angle_between(dipole.k, r)
             E0 = np.sqrt(2) * np.sqrt(1 + np.cos(alpha) / (2 * dipole.wavelength)) * np.exp(
-                1j * dipole.k * r + 1j * dipole.phase) / np.sqrt(length(r))
-            surf.E[i, :] += E0 * unit_vector(rotate_vector(r, np.pi / 2))
-
-
-            # phase = 2 * np.pi * f * length(v) / (c / surf.n1) + dipole.phase
+                1j * np.dot(dipole.k*surf.n1 ,r) + 1j * dipole.phase) / np.sqrt(length(r))
+            if not np.isnan(E0):
+                dl = np.sqrt(np.sum(np.square(surf.points[i,:]-surf.points[i+1,:])))
+                surf.E[i, :] += E0 * unit_vector(rotate_vector(r, np.pi / 2))*dl*dipole.E0
 
         trans_k = transmitted_k(rotate_vector(np.real(surf.E[i, :]), np.pi / 2), surf.normals[i, :], surf.n1, surf.n2)
         trans_k = unit_vector(trans_k)
         if not np.isnan(trans_k[0]):
             new_dipoles.append(Dipole(surf.midpoints[i, :],
-                                          trans_k,
-                                          0.0,
+                                      trans_k,
+                                      length(np.real(surf.E[i, :])),
+                                      np.angle(np.sqrt(surf.E[i, 0] ** 2+surf.E[i, 1]**2)),
+                                      #np.angle(surf.phasors[i]),
                                       dipoles[0].wavelength))
     return new_dipoles
 
@@ -197,12 +211,16 @@ def interact_dipoles_with_screen(dipoles, surf):
             #f = c / d.wavelength  # (c / surf.n1) / dipole.wavelength
             r = surf.midpoints[i, :] - dipole.r
             alpha = angle_between(dipole.k, r)
-            E0 = np.sqrt(2) * np.sqrt((1 + np.cos(alpha)) / (2 * dipole.wavelength)) * np.exp(
-                1j * dipole.k * r + 1j * dipole.phase) / np.sqrt(length(r))
-            surf.E[i, :] += E0 * unit_vector(rotate_vector(r, np.pi / 2))
+            E0 = np.sqrt(2) * np.sqrt(1 + np.cos(alpha) / (2 * dipole.wavelength)) * np.exp(
+                1j * np.dot(dipole.k*surf.n1 ,r) + 1j * dipole.phase) / np.sqrt(length(r))
+            if not np.isnan(E0):
+                dl = np.sqrt(np.sum(np.square(surf.points[i,:]-surf.points[i+1,:])))
+                surf.E[i, :] += E0 * unit_vector(rotate_vector(r, np.pi / 2))*dl*dipole.E0
 
+            #print(surf.E[i, :])
 
             # phase = 2 * np.pi * f * length(v) / (c / surf.n1) + dipole.phase
+
 
 
 
@@ -447,24 +465,34 @@ def plot_all(surf, dipoles,title=''):
 def plot_E(surf):
     fig, ax1 = plt.subplots()
     # ax1.plot(np.abs(surf.phasors) ** 2, 'b-')
-    ax1.plot(np.sqrt(np.sum(np.square(np.real(surf.E)),axis=1)), 'b-')
+    #ax1.plot(np.sqrt(np.sum(np.square(np.real(surf.E)),axis=1)), 'b-')
+    ax1.plot(np.sqrt(np.sum(np.square(np.real(surf.E)), axis=1)), 'b-')
     plt.show()
-    plt.figure()
-    plt.scatter(surf.midpoints[:,0],surf.midpoints[:,1])
-    plt.quiver(surf.midpoints[:,0],surf.midpoints[:,1], np.real(surf.E[:,0])/1,np.real(surf.E[:,1])/1)
-    plt.show()
-
-
+    # plt.figure()
+    # plt.scatter(surf.midpoints[:,0],surf.midpoints[:,1])
+    # plt.quiver(surf.midpoints[:,0],surf.midpoints[:,1], np.real(surf.E[:,0])/1,np.real(surf.E[:,1])/1)
+    # plt.show()
 
 def plot_dipoles(dipoles):
     plt.figure()
     for d in dipoles:
         plt.scatter(d.r[0],d.r[1])
-        k = unit_vector(d.k)
-        plt.arrow(d.r[0], d.r[1], k[0]/1, k[1]/1)
+        k = unit_vector(d.k)*d.E0
+        plt.arrow(d.r[0], d.r[1], k[0]/1000, k[1]/1000)
 
     plt.show()
 
 def print_dipoles(dipoles):
     for d in dipoles:
-        print("r " + str(np.round(d.r, 1)) + " | k " + str(np.round(d.k, 1)) + " | ph " + str(np.round(d.phase, 1)))
+        print("r " + str(np.round(d.r, 1)) +
+              " | k " + str(np.round(d.k, 1)) +
+              " | ph " + str(np.round(d.phase, 1))+
+              " | E0 " + '{:.2e}'.format(d.E0) )
+
+def plot_dipoles_phase(dipoles):
+    plt.figure()
+    i = 0
+    for d in dipoles:
+        plt.scatter(i, d.phase)
+        i += 1
+    plt.show()
