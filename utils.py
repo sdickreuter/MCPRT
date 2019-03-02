@@ -69,9 +69,9 @@ def angle_between(v1, v2):
 def length(v):
     return np.sqrt(np.sum(np.square(v)))
 
-@njit
-def angle(v):
-    return np.sqrt(np.sum(np.square(v)))
+# @njit
+# def angle(v):
+#     return np.sqrt(np.sum(np.square(v)))
 
 
 # calculation of line intersection from

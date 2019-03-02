@@ -16,13 +16,13 @@ from scipy import interpolate
 import time
 
 #c = 2.998e8  # m/s
-wl = 0.1#1e-6
+wl = 500e-9
 
 plotit = False
 
 num = 1024#2048
 
-lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.5, num=num)
+lense1 = HyperbolicLense(x=0.0, y=0,f=2.0,height=0.1, num=num)
 lense1._make_surfaces(flipped=True)
 
 num = 100#500
@@ -35,13 +35,14 @@ print('screen x: '+ str(xs[0]))
 screen = Surface(np.vstack((xs, ys)).T, reflectivity=0.0, transmittance=1.0, n1=1.0, n2=1.0)
 #screen.flip_normals()
 
+
 num=200
 xs = np.linspace(lense1.back.points[:,0].max(), lense1.back.points[:,0].max()+lense1.f*1.5, num)
 ys = np.repeat(0, num)
 screen2 = Surface(np.vstack((xs, ys)).T, reflectivity=0.0, transmittance=1.0, n1=1.0, n2=1.0)
 
 
-ys = np.linspace(lense1.front.midpoints[:,1].min(),lense1.front.midpoints[:,1].max(),30)
+ys = np.linspace(lense1.front.midpoints[:,1].min(),lense1.front.midpoints[:,1].max(),100)
 dipoles = []
 for y in ys:
     dipoles.append(Dipole(np.array([-1.0,y]), np.array([1.0,0.0]), 1.0, 0.0, wl))
@@ -49,20 +50,20 @@ for y in ys:
 print('Start interact with lense1.front')
 onlense1_front = interact_dipoles_with_surface(dipoles, lense1.front)
 print(len(onlense1_front))
-plot_E(lense1.front)
-#plot_dipoles(onlense1_front)
-plot_dipoles_phase(onlense1_front)
+plot_screen_Eabs(lense1.front)
+plot_dipoles(onlense1_front)
+#plot_dipoles_phase(onlense1_front)
 
 print('Start interact with lense1.back')
 onlense1_back = interact_dipoles_with_surface(onlense1_front, lense1.back)
 print(len(onlense1_back))
-plot_E(lense1.back)
-#plot_dipoles(onlense1_back)
-plot_dipoles_phase(onlense1_back)
+plot_screen_Eabs(lense1.back)
+plot_dipoles(onlense1_back)
+#plot_dipoles_phase(onlense1_back)
 
 print('Start interact with screen')
-interact_dipoles_with_screen(onlense1_back, screen)
-plot_E(screen)
+interact_dipoles_with_surface(onlense1_back, screen)
+plot_screen_Eabs(screen)
 # #plot_all(screen,onscreen,"screen")
 # fig, ax1 = plt.subplots()
 # intensity = np.square(np.real(screen.phasors))
@@ -73,8 +74,8 @@ plot_E(screen)
 
 
 print('Start interact with screen2')
-interact_dipoles_with_screen(onlense1_back, screen2)
-plot_E(screen2)
+interact_dipoles_with_surface(onlense1_back, screen2)
+plot_screen_Eabs(screen2)
 # fig, ax1 = plt.subplots()
 # intensity = np.square(np.real(screen2.phasors.copy()))
 # ax1.plot(screen2.midpoints[:,0],intensity, 'b-')
@@ -109,8 +110,8 @@ for i in range(len(dxs)):
     xs = np.repeat(lense1.back.points[:,0].max()+lense1.f, num)+dx
     screen = Surface(np.vstack((xs, ys)).T, reflectivity=0.0, transmittance=1.0, n1=1.0, n2=1.0)
     print("interact "+str(i))
-    interact_dipoles_with_screen(onlense1_back, screen)
-    dat[i, :] = np.sqrt(np.sum(np.square(np.real(screen.E)),axis=1))
+    interact_dipoles_with_surface(onlense1_back, screen)
+    dat[i, :] = np.sqrt(np.sum(np.square(np.abs(screen.E)),axis=1))
     #dat[i, :] = np.angle(screen.E[:,0])
 
 
